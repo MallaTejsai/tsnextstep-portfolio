@@ -133,9 +133,17 @@ export default function AlliRoadmap() {
         t = (startTop - rect.top) / span;
       } else {
         // Vertical timeline: a reference line at 62% of the viewport travels
-        // from the first node to the v0.6 node as the user scrolls.
+        // from the first node to the v0.6 node as the user scrolls. If the
+        // page cannot scroll far enough for that, finish at the lowest
+        // reachable position instead so the line still reaches v0.6 exactly.
         const ref = vh * 0.62;
-        t = (ref - rect.top - pts[0].y) / stopDist;
+        const startTop = ref - pts[0].y;
+        let finishTop = startTop - stopDist;
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - vh);
+        const minTop = rect.top - Math.max(0, maxScroll - window.scrollY);
+        if (minTop > finishTop) finishTop = Math.min(minTop, startTop - 1);
+        const span = Math.max(startTop - finishTop, 1);
+        t = (startTop - rect.top) / span;
       }
       target = Math.min(Math.max(t, 0), 1);
     };
