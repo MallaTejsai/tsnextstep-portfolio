@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050505" />
+
+    <title>Tejsai | AI Builder &amp; Developer — TS nextstep</title>
+    <meta
+      name="description"
+      content="I'm Tejsai, a student, developer and AI builder exploring AI, programming and technology while building projects like ALLI."
+    />
+    <meta name="author" content="Tejsai / TS nextstep" />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TS nextstep" />
+    <meta property="og:title" content="Tejsai | AI Builder &amp; Developer — TS nextstep" />
+    <meta
+      property="og:description"
+      content="I'm Tejsai, a student, developer and AI builder exploring AI, programming and technology while building projects like ALLI."
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tejsai | AI Builder &amp; Developer — TS nextstep" />
+    <meta
+      name="twitter:description"
+      content="I'm Tejsai, a student, developer and AI builder exploring AI, programming and technology while building projects like ALLI."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Tejsai",
+        "alternateName": "TS nextstep",
+        "jobTitle": "Student, Developer, AI Builder, Content Creator",
+        "sameAs": [
+          "https://youtube.com/@tsnextstep?si=bycpKGuFO0dGItiW",
+          "https://www.instagram.com/tsnextstep?stkn=MXd2cTRraWsyankxMg=="
+        ]
+      }
+    </script>
+
+    <style>
+      html {
+        background: #050505;
+        color-scheme: dark;
+      }
+    </style>
+
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div
+        style="
+          max-width: 42rem;
+          margin: 4rem auto;
+          padding: 0 1.5rem;
+          color: #c8c8d0;
+          font-family: system-ui, sans-serif;
+          line-height: 1.7;
+        "
+      >
+        <h1 style="color: #fff">Tejsai — TS nextstep</h1>
+        <p>
+          This portfolio uses interactive UI (roadmap, video library, contact form) and needs
+          JavaScript enabled. You can still find me on
+          <a href="https://youtube.com/@tsnextstep?si=bycpKGuFO0dGItiW" style="color: #ff2d3f"
+            >YouTube</a
+          >
+          and
+          <a href="https://www.instagram.com/tsnextstep?stkn=MXd2cTRraWsyankxMg==" style="color: #ff2d3f"
+            >Instagram</a
+          >.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" id="app-src" src="/src/main.jsx"></script>
+    <script>
+      /* Opened by double-click (file://)? The dev module script cannot run from disk.
+         Send this page to the built single-file site instead — or explain how to build. */
+      (function () {
+        if (location.protocol !== "file:") return;
+
+        /* Only the source entry loads an external dev script; built/standalone
+           pages carry an inlined app script and are left untouched. */
+        var src = document.getElementById("app-src");
+        if (!src || !src.getAttribute("src")) return;
+
+        if (src.parentNode) src.parentNode.removeChild(src);
+
+        var probe = new Image();
+        probe.onload = function () {
+          location.replace("./dist/index.html");
+        };
+        probe.onerror = function () {
+          document.body.insertAdjacentHTML(
+            "beforeend",
+            '<div style="max-width:44rem;margin:4rem auto;padding:1.5rem 1.75rem;' +
+              "color:#f4f4f6;font-family:system-ui,sans-serif;line-height:1.7;" +
+              'background:#0d0d10;border:1px solid rgba(255,45,63,.45);border-radius:14px">' +
+              '<h1 style="margin:0 0 .75rem;font-size:1.35rem;color:#ff5c68">Nothing to show yet</h1>' +
+              '<p style="margin:0 0 .75rem">This is the source entry point — it needs a build. ' +
+              "Run <code>npm run build</code> (or <code>npm run dev</code>) in the " +
+              "<code>portfolio/</code> folder, then open <code>dist/index.html</code>.</p>" +
+              '<p style="margin:0;color:#a9a9b4">See README.md for setup.</p></div>'
+          );
+        };
+        probe.src = "./dist/favicon.svg";
+      })();
+    </script>
+  </body>
+</html>
