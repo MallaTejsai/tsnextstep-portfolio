@@ -11,13 +11,7 @@ const EMPTY = { name: "", email: "", message: "", botcheck: "" };
 const SUCCESS_STATUS = {
   type: "success",
   title: "MESSAGE SENT ✓",
-  text: "Thanks for reaching out.",
-};
-
-const SUBMIT_ERROR_STATUS = {
-  type: "error",
-  title: "MESSAGE COULD NOT BE SENT",
-  text: "Please try again.",
+  text: "Thanks for reaching out. I'll get back to you.",
 };
 
 const VALIDATION_STATUS = {
@@ -52,6 +46,7 @@ export default function Contact() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (sending) return;
     const nextErrors = validate(values);
     setErrors(nextErrors);
 
@@ -72,15 +67,16 @@ export default function Contact() {
         message: values.message.trim(),
         botcheck: values.botcheck,
       });
+      // Reset the form only after a confirmed successful submission.
       setValues(EMPTY);
       setStatus(SUCCESS_STATUS);
     } catch (err) {
-      if (err?.code === "NOT_CONFIGURED") {
-        console.warn(
-          "[contact] VITE_WEB3FORMS_ACCESS_KEY is not set — see .env.example. Visitors see a generic failure.",
-        );
-      }
-      setStatus(SUBMIT_ERROR_STATUS);
+      // Keep whatever the visitor typed so they can retry.
+      setStatus({
+        type: "error",
+        title: "MESSAGE COULD NOT BE SENT",
+        text: err?.message || "Please try again.",
+      });
     } finally {
       setSending(false);
     }
@@ -227,7 +223,11 @@ export default function Contact() {
                   type="submit"
                   disabled={sending || isSuccess}
                 >
-                  {sending ? "SENDING..." : isSuccess ? "MESSAGE SENT" : "SEND MESSAGE"}
+                  {sending
+                    ? "SENDING MESSAGE..."
+                    : isSuccess
+                      ? "MESSAGE SENT"
+                      : "SEND MESSAGE"}
                   {sending ? null : isSuccess ? <CheckIcon /> : <SendIcon />}
                 </button>
               </div>

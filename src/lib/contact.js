@@ -1,13 +1,11 @@
 /**
  * Contact form delivery — Web3Forms (static site, no custom backend).
  *
- * Configure via env var (see .env.example):
- *   VITE_WEB3FORMS_ACCESS_KEY=your_access_key_here
+ * Configure via env variable (see .env.example):
+ *   VITE_WEB3FORMS_ACCESS_KEY=your_web3forms_access_key_here
  *
- * The access key is a client-side publish key per Web3Forms' own docs, but it
- * still stays centralized in env config — never hard-coded. No personal email
- * address, password or private credential is ever exposed in the UI or the
- * bundled code.
+ * Load it into `.env`, then RESTART the dev server (Vite reads env vars when
+ * the server starts) or rebuild for production. Never hard-code the key.
  */
 
 const ACCESS_KEY = (import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || "").trim();
@@ -20,48 +18,70 @@ export function isContactConfigured() {
 
 export async function sendContactMessage({ name, email, message, botcheck = "" }) {
   if (!isContactConfigured()) {
-    const err = new Error("Web3Forms access key is not configured.");
+    console.error("Web3Forms access key is missing.");
+    console.error(
+      "Set VITE_WEB3FORMS_ACCESS_KEY in .env (copy .env.example), then restart the dev server or rebuild.",
+    );
+    const err = new Error("Web3Forms access key is missing.");
     err.code = "NOT_CONFIGURED";
     throw err;
   }
 
-  // Simple spam prevention: humans never see this honeypot field. Pretend the
-  // message went through instead of telling the bot it was filtered.
+  // Spam protection: humans never see this honeypot field. If it was filled,
+  // pretend the message went through instead of telling the bot it was filtered.
   if (String(botcheck || "").trim()) {
     return { ok: true, spam: true };
   }
 
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      access_key: ACCESS_KEY,
-      name,
-      email,
-      message,
-      subject: SUBJECT,
-      from_name: "TS nextstep portfolio",
-      botcheck: "",
-    }),
-  });
+  let res;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        access_key: ACCESS_KEY,
+        subject: SUBJECT,
+        name,
+        email,
+        message,
+        botcheck: "",
+      }),
+    });
+  } catch (networkErr) {
+    console.error(
+      "Web3Forms request failed (network):",
+      networkErr?.message || networkErr,
+    );
+    const err = new Error("Network error — check your connection and try again.");
+    err.code = "NETWORK";
+    throw err;
+  }
 
   let data = null;
   try {
     data = await res.json();
   } catch {
-    /* non-JSON body — handled below */
+    console.error("Web3Forms returned a non-JSON response. HTTP status:", res.status);
   }
 
-  if (!res.ok || data?.success === false) {
-    const err = new Error(
-      (data && (data.message || data.error)) || `Request failed with status ${res.status}.`,
-    );
-    err.status = res.status;
-    throw err;
+  // Success ONLY when Web3Forms confirms it.
+  if (res.ok && data?.success === true) {
+    return { ok: true };
   }
 
-  return { ok: true };
+  const detail =
+    (data && (data.message || data.error)) ||
+    `Web3Forms returned HTTP ${res.status} without an error message.`;
+  console.error("Web3Forms submission failed:", {
+    url: ENDPOINT,
+    status: res.status,
+    ok: res.ok,
+    response: data,
+  });
+  const err = new Error(detail);
+  err.status = res.status;
+  throw err;
 }
