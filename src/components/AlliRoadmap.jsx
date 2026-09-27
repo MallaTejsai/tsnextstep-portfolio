@@ -10,7 +10,28 @@ const STATUS_LABEL = {
 
 const CURRENT_INDEX = ALLI_ROADMAP.findIndex((v) => v.status === "current");
 const HORIZONTAL_QUERY = "(min-width: 769px)";
+const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 
+/*
+ * Reusable roadmap progress system (desktop + mobile):
+ *
+ *   geometry  — measure()  : node centers in journey content coordinates,
+ *                axis distances (first node → v0.6 = stopDist), rail + stop tick.
+ *   target    — computeTarget() : continuous 0→1 progress from the journey
+ *                container's position relative to a viewport reference line.
+ *                0 = line at the first node, 1 = line exactly at the v0.6 node
+ *                center. Always clamped — the red line can never enter v0.7+.
+ *   smoothing — a single requestAnimationFrame loop lerps current → target
+ *                (factor 0.12; instant when prefers-reduced-motion), then
+ *                writes the result straight to the DOM:
+ *                  --roadmap-progress  →  fill size via CSS calc
+ *                    desktop: width = progress * --roadmap-stop
+ *                    mobile : height = progress * --roadmap-stop
+ *                plus is-lit node classes. No React state on the scroll path.
+ *
+ * Scroll/resize handlers only flag `dirty` and schedule the one frame in
+ * flight; getBoundingClientRect runs at most once per scheduled frame.
+ */
 export default function AlliRoadmap() {
   const journeyRef = useRef(null);
   const trackRef = useRef(null);
@@ -27,107 +48,142 @@ export default function AlliRoadmap() {
     if (!journey || !track || !fill || !rail) return;
 
     const mq = window.matchMedia(HORIZONTAL_QUERY);
+    const reduceMq = window.matchMedia(REDUCED_QUERY);
     const items = Array.from(track.querySelectorAll(".rm-item"));
     const nodes = items.map((item) => item.querySelector(".rm-node"));
 
-    let pts = []; // node centers, content coordinates
-    let rel = []; // distances from the first node
-    let stopDist = 0;
+    let hz = mq.matches;
+    let pts = []; // node centers, journey content coordinates
+    let rel = []; // distance along the axis from the first node
+    let stopDist = 0; // first node → v0.6 node center (the hard limit)
+    let railLen = 0; // first node → last node
+    let target = 0; // desired progress 0..1 (1 = v0.6)
+    let current = 0; // smoothed progress 0..1
+    let raf = 0;
+    let dirty = true;
     let lit = items.map(() => false);
     let currentArmed = false;
-    let queued = false;
 
-    const measure = () => {
-      const hz = mq.matches;
+    const axis = (p) => (hz ? p.x : p.y);
+
+    /* ---- geometry: node centers in content coordinates, rail layout ---- */
+    const measure = (snap) => {
+      hz = mq.matches;
+      const jr = journey.getBoundingClientRect();
       pts = items.map((item, i) => {
         const n = nodes[i];
         if (!n) return { x: 0, y: 0 };
+        const nr = n.getBoundingClientRect();
         return {
-          x: item.offsetLeft + n.offsetLeft + n.offsetWidth / 2,
-          y: item.offsetTop + n.offsetTop + n.offsetHeight / 2,
+          x: nr.left + nr.width / 2 - jr.left + journey.scrollLeft,
+          y: nr.top + nr.height / 2 - jr.top + journey.scrollTop,
         };
       });
       if (!pts.length) return;
 
-      const first = pts[0];
-      const last = pts[pts.length - 1];
-      rel = pts.map((p) => (hz ? p.x - first.x : p.y - first.y));
-      stopDist = rel[CURRENT_INDEX] ?? rel[rel.length - 1];
+      const first = axis(pts[0]);
+      rel = pts.map((p) => axis(p) - first);
+      stopDist = Math.max(rel[CURRENT_INDEX] ?? rel[rel.length - 1], 1);
+      railLen = Math.max(rel[rel.length - 1], stopDist);
 
+      rail.style.left = `${pts[0].x}px`;
+      rail.style.top = `${pts[0].y}px`;
       if (hz) {
-        rail.style.left = `${first.x}px`;
-        rail.style.top = `${first.y}px`;
-        rail.style.width = `${Math.max(last.x - first.x, 0)}px`;
+        rail.style.width = `${railLen}px`;
         rail.style.height = "";
         if (stopMark) {
           stopMark.style.left = `${stopDist}px`;
           stopMark.style.top = "";
         }
       } else {
-        rail.style.left = `${first.x}px`;
-        rail.style.top = `${first.y}px`;
-        rail.style.height = `${Math.max(last.y - first.y, 0)}px`;
+        rail.style.height = `${railLen}px`;
         rail.style.width = "";
         if (stopMark) {
           stopMark.style.top = `${stopDist}px`;
           stopMark.style.left = "";
         }
       }
-      update();
+
+      journey.style.setProperty("--roadmap-stop", `${stopDist}px`);
+
+      dirty = false;
+      computeTarget();
+      if (snap) current = target; // orientation/layout-mode switch: re-anchor
+      render();
+      kick();
     };
 
-    const update = () => {
-      queued = false;
-      if (!rel.length) return;
-      const hz = mq.matches;
-      let reach;
-
+    /* ---- continuous 0 → 1 progress from viewport position ---- */
+    const computeTarget = () => {
+      const rect = journey.getBoundingClientRect();
+      const vh = window.innerHeight;
+      let t;
       if (hz) {
-        // Desktop: vertical scroll progress through the section drives the
-        // horizontal line; it reaches v0.6 at ~60% and then stops for good.
-        const rect = journey.getBoundingClientRect();
-        const vh = window.innerHeight;
-        const startLine = vh * 0.75;
-        const endLine = vh * 0.3;
-        const denom = startLine - endLine + rect.height;
-        const p = denom > 0 ? (startLine - rect.top) / denom : 1;
-        const c = Math.min(Math.max(p, 0), 1);
-        reach = Math.min(c / 0.6, 1) * stopDist;
+        // Horizontal timeline: page scroll carries the journey up through the
+        // viewport. The line starts as the section is reached and is fully at
+        // v0.6 once it has settled into view — then stops for good.
+        const startTop = vh * 0.9;
+        let finishTop = vh * 0.18;
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - vh);
+        const minTop = rect.top - Math.max(0, maxScroll - window.scrollY);
+        // If the page cannot scroll the journey up to finishTop, finish at the
+        // lowest reachable position instead so the line still reaches v0.6.
+        if (minTop > finishTop) finishTop = Math.min(minTop, startTop - 1);
+        const span = Math.max(startTop - finishTop, 1);
+        t = (startTop - rect.top) / span;
       } else {
-        // Mobile: the line tip rides a trigger line at ~62% of the viewport.
-        // A node lights when its dot crosses that line; the tip can never
-        // travel past the v0.6 node.
-        const rect = journey.getBoundingClientRect();
-        const trigger = window.innerHeight * 0.62;
-        reach = trigger - rect.top - pts[0].y;
-        reach = Math.min(Math.max(reach, 0), stopDist);
+        // Vertical timeline: a reference line at 62% of the viewport travels
+        // from the first node to the v0.6 node as the user scrolls.
+        const ref = vh * 0.62;
+        t = (ref - rect.top - pts[0].y) / stopDist;
       }
+      target = Math.min(Math.max(t, 0), 1);
+    };
 
-      fill.style[hz ? "width" : "height"] = `${Math.max(reach, 0)}px`;
-      fill.style[hz ? "height" : "width"] = "";
-      fill.classList.toggle("is-active", reach > 1);
+    /* ---- apply progress to the DOM (direct writes, no React state) ---- */
+    const render = () => {
+      const pos = current * stopDist;
+      journey.style.setProperty("--roadmap-progress", current.toFixed(5));
+      fill.classList.toggle("is-active", pos > 2);
 
       for (let i = 0; i < items.length; i += 1) {
-        const on = reach >= rel[i] - 1;
+        const on = pos >= (rel[i] ?? Infinity) - 1;
         if (on !== lit[i]) {
           lit[i] = on;
           items[i].classList.toggle("is-lit", on);
         }
       }
 
-      if (!currentArmed && CURRENT_INDEX >= 0 && reach >= stopDist - 1) {
+      if (!currentArmed && CURRENT_INDEX >= 0 && pos >= stopDist - 1) {
         currentArmed = true;
         items[CURRENT_INDEX]?.classList.add("is-current-active");
       }
     };
 
-    const schedule = () => {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(update);
+    /* ---- one rAF loop at a time: lerp toward the target, then rest ---- */
+    const tick = () => {
+      raf = 0;
+      if (dirty) {
+        computeTarget();
+        dirty = false;
+      }
+      const k = reduceMq.matches ? 1 : 0.12;
+      current += (target - current) * k;
+      if (Math.abs(target - current) < 0.0015) current = target;
+      render();
+      if (current !== target || dirty) raf = requestAnimationFrame(tick);
     };
 
-    // Card reveals — Intersection Observer only, no scroll work per frame.
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+
+    const onScroll = () => {
+      dirty = true;
+      kick();
+    };
+
+    /* ---- card reveals — Intersection Observer only ---- */
     let io = null;
     if ("IntersectionObserver" in window) {
       io = new IntersectionObserver(
@@ -146,21 +202,25 @@ export default function AlliRoadmap() {
       items.forEach((item) => item.classList.add("is-in"));
     }
 
-    const ro = "ResizeObserver" in window ? new ResizeObserver(schedule) : null;
+    const ro = "ResizeObserver" in window ? new ResizeObserver(() => measure(false)) : null;
     ro?.observe(track);
 
-    const onMq = () => measure();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
+    const onMq = () => measure(true); // desktop ⇄ mobile: re-anchor geometry
+    const onReduce = () => measure(true);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     mq.addEventListener?.("change", onMq);
-    document.fonts?.ready.then(measure).catch(() => {});
+    reduceMq.addEventListener?.("change", onReduce);
+    document.fonts?.ready.then(() => measure(false)).catch(() => {});
 
-    measure();
+    measure(true);
 
     return () => {
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       mq.removeEventListener?.("change", onMq);
+      reduceMq.removeEventListener?.("change", onReduce);
+      if (raf) cancelAnimationFrame(raf);
       ro?.disconnect();
       io?.disconnect();
     };

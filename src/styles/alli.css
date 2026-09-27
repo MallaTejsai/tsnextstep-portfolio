@@ -325,11 +325,13 @@
   z-index: 0;
 }
 
+/* size = --roadmap-progress (0..1, v0.6 = 1) × --roadmap-stop (px to v0.6) */
 .rm-rail-fill {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
+  height: calc(var(--roadmap-progress, 0) * var(--roadmap-stop, 0px));
   border-radius: 99px;
   background: linear-gradient(180deg, rgba(255, 45, 63, 0.45), var(--red) 22%, var(--red));
   box-shadow: 0 0 14px rgba(255, 45, 63, 0.5);
@@ -447,15 +449,15 @@
   }
 }
 
-/* subtle continuous pulse after activation (never a hard flash) */
-.rm-item.is-current.is-current-active.is-lit .rm-node {
-  animation: rm-node-pulse 3.4s ease-in-out 1.1s infinite;
+/* one subtle pulse the first time the line activates v0.6 (no looping flash) */
+.rm-item.is-current.is-current-active .rm-node {
+  animation: rm-node-pulse 2.6s ease-in-out 1;
 }
 
 @keyframes rm-node-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 5px rgba(255, 45, 63, 0.14), 0 0 20px rgba(255, 45, 63, 0.45);
+    box-shadow: 0 0 0 5px rgba(255, 45, 63, 0.16), 0 0 24px rgba(255, 45, 63, 0.55);
   }
   50% {
     box-shadow: 0 0 0 9px rgba(255, 45, 63, 0.2), 0 0 32px rgba(255, 45, 63, 0.68);
@@ -705,7 +707,7 @@
   }
 
   .rm-rail-fill {
-    width: 0;
+    width: calc(var(--roadmap-progress, 0) * var(--roadmap-stop, 0px));
     height: 100%;
     background: linear-gradient(90deg, rgba(255, 45, 63, 0.45), var(--red) 22%, var(--red));
   }
@@ -729,11 +731,20 @@
 
 /* ============================================================
    Reduced motion — keep the scroll fill (it is a position
-   indicator) but drop pulses, rings and card slides.
+   indicator) but drop pulses, rings and card slides. The JS
+   loop also skips interpolation in this mode.
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
   .rm-card {
+    transition: none;
+  }
+
+  .rm-node {
+    transition: none;
+  }
+
+  .rm-rail-fill::after {
     transition: none;
   }
 
