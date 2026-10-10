@@ -1,52 +1,60 @@
-import { useRef, useState } from "react";
-import { ALLI_VIDEOS } from "../data/alliVideos";
+import { CURRENT_FOCUS, EDUCATION, JOURNEY } from "../data/journey";
 import Reveal from "./Reveal";
-import VideoCard from "./VideoCard";
-import VideoModal from "./VideoModal";
 
+/**
+ * "My journey" — the real timeline: education, content, learning and ALLI.
+ * No video players here; the poster gallery lives in the Content section.
+ */
 export default function Journey() {
-  const [active, setActive] = useState(null);
-  const originRef = useRef(null);
-
-  const open = (video, trigger) => {
-    originRef.current = trigger;
-    setActive(video);
-  };
-
   return (
-    <section className="section" id="journey" aria-labelledby="journey-title">
+    <section className="section section-alt" id="journey" aria-labelledby="journey-title">
       <div className="container">
-        <Reveal className="section-head journey-head-row">
-          <div>
-            <span className="eyebrow">Video series</span>
-            <h2 className="section-title" id="journey-title">
-              The ALLI <span className="accent">build series</span>
-            </h2>
-            <p className="section-lead">
-              I document the entire ALLI project as a video series — every milestone, from the
-              first Python chatbot to the intelligent memory engine, filmed as it happens.
-            </p>
-          </div>
-          <p className="journey-count">
-            <strong>{String(ALLI_VIDEOS.length).padStart(2, "0")}</strong> episodes live · new
-            parts added as they ship
+        <Reveal className="section-head">
+          <span className="eyebrow">My journey</span>
+          <h2 className="section-title" id="journey-title">
+            Student. Builder. <span className="accent">AI developer.</span>
+          </h2>
+          <p className="section-lead">
+            The path so far — one course, one project and one video at a time.
           </p>
         </Reveal>
 
-        <div className="video-grid">
-          {ALLI_VIDEOS.map((video, i) => (
-            <Reveal key={video.id} delay={Math.min(i * 0.05, 0.3)}>
-              <VideoCard video={video} onOpen={(v, trigger) => open(v, trigger)} />
+        <div className="journey-layout">
+          <ol className="jt">
+            {JOURNEY.map((item, i) => (
+              <Reveal as="li" key={item.id} delay={i * 0.06} className="jt-item">
+                <span className="jt-node" aria-hidden="true" />
+                <div className="jt-card">
+                  <div className="jt-meta">
+                    <span className="jt-period">{item.period}</span>
+                    <span className="jt-tag">{item.tag}</span>
+                  </div>
+                  <h3 className="jt-title">{item.title}</h3>
+                  <p className="jt-summary">{item.summary}</p>
+                </div>
+              </Reveal>
+            ))}
+          </ol>
+
+          <aside className="journey-side">
+            <Reveal className="journey-card">
+              <span className="eyebrow">Education</span>
+              <h3 className="journey-card-title">{EDUCATION.school}</h3>
+              <p className="journey-card-status">{EDUCATION.status}</p>
+              <p className="journey-card-body">{EDUCATION.body}</p>
             </Reveal>
-          ))}
+
+            <Reveal className="journey-card" delay={0.08}>
+              <span className="eyebrow">Current focus</span>
+              <ul className="focus-list">
+                {CURRENT_FOCUS.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </Reveal>
+          </aside>
         </div>
       </div>
-
-      <VideoModal
-        video={active}
-        onClose={() => setActive(null)}
-        originRef={originRef}
-      />
     </section>
   );
 }

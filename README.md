@@ -1,14 +1,21 @@
 # Tejsai / TS nextstep — Portfolio
 
-Premium black + red portfolio site for **Tejsai (TS nextstep)** — student, developer, AI builder
-and content creator. Built with **React + Vite**, fully data-driven, mobile-first and accessible.
+Premium dark (black + electric blue / violet) portfolio site for **Tejsai (TS nextstep)** —
+student, developer, AI builder and content creator. Built with **React + Vite**, fully
+data-driven, mobile-first and accessible.
 
 - Flagship project: **ALLI** (personal AI assistant, currently **v0.6 — current development**)
-- Public ALLI roadmap: **10 milestones, v0.1 → v1.0** (a scroll-driven journey that stops at
-  v0.6; nothing beyond v1.0 is ever shown publicly)
-- Video series library: **8 episodes**, each opening a platform picker (YouTube / Instagram)
-- Contact form via **Web3Forms** with validation and sending/success/error states (no email
-  address is exposed anywhere on the site)
+- Interactive **"Meet ALLI"** experience: a CSS-3D visualization (rings, orbiting nodes, depth
+  panels) plus an honest, interactive **architecture flow** — USER → PYTHON → ALLI → OLLAMA →
+  QWEN → RESPONSE. The scene is labelled as a visualization; nothing on the site pretends to be
+  live inference or real telemetry.
+- Public ALLI history: **v0.1 → v0.6 on the timeline** (the line stops at v0.6) with a separate
+  **Planned next** list for v0.7 → v1.0 — future work is never presented as built
+- Video series library: **8 episodes** shown with their **real cover artwork**, each opening a
+  platform picker (YouTube / Instagram)
+- Journey timeline (education, learning, ALLI, what's next) and a 4-project showcase
+- Contact: email is shown (`mailto:`), social links, and a **Web3Forms** contact form with
+  validation and sending/success/error states
 
 ---
 
@@ -17,14 +24,15 @@ and content creator. Built with **React + Vite**, fully data-driven, mobile-firs
 ```bash
 npm install          # if esbuild's postinstall was skipped: node node_modules/esbuild/install.js
 npm run dev          # dev server → http://localhost:5173
-npm run build        # production build → dist/ (one self-contained index.html)
+npm run build        # production build → dist/ (one self-contained index.html + images/)
 npm run preview      # serve the production build locally
 ```
 
 **Opening from disk:** `npm run build` inlines all JS and CSS into a single
-`dist/index.html`, so you can double-click that file and the site just works (no server
-needed). Double-clicking the *source* `index.html` redirects you to `dist/index.html`
-automatically — the source entry only runs through `npm run dev`.
+`dist/index.html` (posters are copied to `dist/images/content/`), so you can open that file
+directly and the site just works (no server needed). Double-clicking the *source* `index.html`
+redirects you to `dist/index.html` automatically — the source entry only runs through
+`npm run dev`.
 
 ## Project structure
 
@@ -35,22 +43,26 @@ portfolio/
 ├── .env.example               # VITE_WEB3FORMS_ACCESS_KEY template
 ├── public/
 │   ├── favicon.svg
-│   └── img.png                # ← drop your portrait here (see below)
+│   ├── img.jpeg               # shipped portrait (img.png tried as fallback)
+│   └── images/content/        # real episode cover artwork (intro + part-01…07)
 └── src/
     ├── main.jsx               # entry + style imports
     ├── App.jsx                # section composition
-    ├── components/            # Navbar, Hero, About, Work, Alli, Journey, Skills,
-    │                          # Content, Contact, Footer, VideoCard, VideoModal, Reveal, icons
+    ├── components/            # Navbar, Hero, About, Work, Alli, AlliScene, AlliArchitecture,
+    │                          # AlliRoadmap, Journey, Skills, Content, Contact, Footer,
+    │                          # VideoCard, VideoModal, Reveal, icons
     ├── data/
-    │   ├── alliRoadmap.js     # public roadmap v0.1 → v1.0 (10 milestones, v0.6 current)
-    │   ├── alliVideos.js      # 8 episodes with exact IG/YT links
-    │   ├── projects.js        # "What I'm building" cards
-    │   ├── skills.js          # skill groups
-    │   ├── contentTopics.js   # content pillars
-    │   └── site.js            # identity, social links, nav
+    │   ├── site.js            # identity, roles, email, social links, nav
+    │   ├── alliRoadmap.js     # completed history (v0.1 → v0.6) + planned list (v0.7 → v1.0)
+    │   ├── alliArchitecture.js# USER → RESPONSE flow used by the interactive diagram
+    │   ├── alliVideos.js      # 8 episodes with exact IG/YT links + poster paths
+    │   ├── journey.js         # timeline, education, current focus
+    │   ├── projects.js        # 4 projects (ALLI featured)
+    │   └── skills.js          # skill groups
     ├── hooks/                 # useReveal (scroll reveal + scroll-spy), useBodyScrollLock
     ├── lib/                   # contact.js (form submit), asset.js (public/ asset paths)
-    └── styles/                # base, navbar-hero, sections, alli, journey, contact-footer
+    └── styles/                # base, navbar-hero, sections, alli (scene/architecture/roadmap),
+                               # journey, contact-footer
 ```
 
 ## Your portrait
@@ -62,10 +74,18 @@ The hero resolves it through `asset()`, so it also works when the site is hosted
 If neither file exists, the hero shows a clean `TS — Portrait coming soon` fallback instead of a
 broken image or a placeholder avatar.
 
+## Episode cover artwork
+
+Posters live in **`public/images/content/`** and are referenced from `src/data/alliVideos.js`
+(`poster: "images/content/part-01.webp"`). Cards show the cover in a 5:6 frame; the modal shows
+it as a 16:9 preview. If a poster path is missing, the card falls back to the episode number
+instead of a broken image.
+
 ## Contact form setup (Web3Forms)
 
-The site never shows an email address. Messages are delivered by [Web3Forms](https://web3forms.com)
-(free tier, 250 submissions/month, no server-side code):
+Messages are delivered by [Web3Forms](https://web3forms.com)
+(free tier, 250 submissions/month, no server-side code). The site also shows the email address
+directly so visitors can write without the form:
 
 1. Create a free access key at [web3forms.com](https://web3forms.com) (one-click signup, no form
    to build — the key is a client-side publish key by design).
@@ -86,18 +106,20 @@ prevention. Without a key the form still validates, then shows the standard
 | What to change | File |
 |---|---|
 | Add an episode (Part 8, 9, …) | `src/data/alliVideos.js` — append an object; cards, counter and modal update automatically |
-| Change a roadmap version | `src/data/alliRoadmap.js` — keep `version`, `title`, `summary`, `status` (`past` \| `current` \| `future`) |
-| Add Project 2 / 3 / 4 | `src/data/projects.js` — uncomment the example block |
-| Skills, content pillars, social URLs, nav | `src/data/skills.js`, `src/data/contentTopics.js`, `src/data/site.js` |
+| Change the roadmap | `src/data/alliRoadmap.js` — `HISTORY` (built, up to v0.6) and `PLANNED` (future, v0.7 → v1.0) |
+| Architecture flow steps | `src/data/alliArchitecture.js` — keep the USER → RESPONSE order honest |
+| Projects, journey, skills, social URLs, nav | `src/data/projects.js`, `journey.js`, `skills.js`, `site.js` |
 
-**Roadmap rules:** `src/data/alliRoadmap.js` is the single source of truth and is **public scope
-only: v0.1 → v1.0** — never add versions beyond v1.0, and never mention them anywhere on the
-site. Capabilities must not move between versions, and **v0.6 must stay `status: "current"`**
-(shown as *CURRENT DEVELOPMENT*, never as completed/finished/released). The timeline's red line
-stops at v0.6 by design.
+**Honesty rules (please keep):**
 
-**Video link rules:** each episode's Instagram and YouTube URLs must never be swapped — the test
-suite verifies all 8 pairs.
+- `src/data/alliRoadmap.js` is the single source of truth. **v0.6 must stay `status: "current"`**
+  (shown as *CURRENT DEVELOPMENT*), the timeline must stop there, and planned versions belong in
+  `PLANNED` only — never styled or labelled as shipped.
+- The ALLI scene and architecture diagram are visualizations of a local Python project. Keep the
+  "not live telemetry / not connected to this website" wording.
+- Don't invent GitHub or live-demo URLs — only link what actually exists.
+
+**Video link rules:** each episode's Instagram and YouTube URLs must never be swapped.
 
 ## SEO
 
@@ -109,15 +131,16 @@ suite verifies all 8 pairs.
 ## Accessibility & motion
 
 - Semantic landmarks, skip link, labelled form fields with inline errors
-- Modal: focus trap, Esc, backdrop click, focus restoration, scroll lock
+- Modal: focus trap, Esc, backdrop click, focus restoration, scroll lock, poster preview
 - Mobile menu: hamburger ↔ X animation, focus trap, Esc, `aria-expanded`
-- axe-core: **0 violations**
-- All animation respects `prefers-reduced-motion`
+- Architecture diagram: keyboard-focusable steps, `aria-live` detail panel
+- Scene motion pauses when off-screen and fully stops under `prefers-reduced-motion`
+- No horizontal overflow from 360px up to 1920px
 
 ## Deploying
 
-Build is a single self-contained `dist/index.html` (`base: "./"` + inlined assets, so it works
-from any path, any host, or straight from disk):
+Build is a single self-contained `dist/index.html` plus `dist/images/` (`base: "./"` + inlined
+assets, so it works from any path, any host, or straight from disk):
 
 ```bash
 npm run build
@@ -129,11 +152,13 @@ npm run build
 
 ## Verification
 
-The repo was verified with:
+Verified with `npm run build` and a Playwright pass over the production build:
 
-- static checks: identity, public roadmap exactly v0.1 → v1.0 (no version beyond v1.0 anywhere),
-  v0.6 current-not-completed, all 8 episode link pairs, nav, form fields, Web3Forms config,
-  no exposed email address or email links
-- browser checks (Playwright): console/runtime errors, modal behaviour, form validation and
-  sending/success/error states, scroll-driven roadmap fill (stops at v0.6), mobile menu, smooth
-  scroll, no horizontal overflow at 320–1920px, axe-core 0 violations
+- viewports 1920 / 1440 / 1366 / 1024 / 768 / 390 / 360 — no console or runtime errors, no
+  failed requests, no horizontal overflow, all 8 posters load
+- roadmap fits without scrolling at ≥1366px (v0.6 always visible), scrolls 769–1365px, becomes a
+  vertical timeline below that
+- `prefers-reduced-motion`: zero running animations
+- scroll-spy highlights the correct section everywhere (including the tall ALLI block)
+- poster modal opens with Enter, traps focus, closes with Esc and returns focus; architecture
+  steps switch the `aria-live` detail panel; mobile menu toggles with `aria-expanded`

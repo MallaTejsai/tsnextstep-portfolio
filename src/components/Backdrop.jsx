@@ -60,7 +60,7 @@ export default function Backdrop() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 120, 130, ${p.a})`;
+        ctx.fillStyle = `rgba(140, 175, 255, ${p.a})`;
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j += 1) {
@@ -73,7 +73,7 @@ export default function Backdrop() {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = `rgba(255, 45, 63, ${op})`;
+            ctx.strokeStyle = `rgba(77, 141, 255, ${op})`;
             ctx.lineWidth = 0.7;
             ctx.stroke();
           }

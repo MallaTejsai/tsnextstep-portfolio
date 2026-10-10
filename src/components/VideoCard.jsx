@@ -1,25 +1,44 @@
 import { ArrowUpRight, PlayIcon } from "./icons";
 
 /**
- * Video episode card. The whole card is clickable via an overlay button,
- * so the markup stays valid (no interactive elements nested in a <button>).
+ * Poster gallery card for one episode.
+ * The REAL cover artwork leads; the card is one big click target that opens
+ * the platform picker (YouTube / Instagram). No video is embedded or autoplayed.
  */
-export default function VideoCard({ video, onOpen }) {
-  const label = `Watch ${video.title} — choose where to watch this episode`;
+export default function VideoCard({ video, onOpen, eager = false }) {
+  const label = `Open ${video.title} — choose where to watch this episode`;
 
   return (
-    <article className="video-card" data-video={video.id}>
-      <span className="video-thumb">
-        <span className="video-num">{video.number}</span>
-        <span className="video-play" aria-hidden="true">
+    <article className="poster-card" data-video={video.id}>
+      <span className="poster-media">
+        {video.poster ? (
+          <img
+            src={video.poster}
+            alt={`${video.title} — cover artwork for the ALLI build series`}
+            width={1000}
+            height={1200}
+            loading={eager ? "eager" : "lazy"}
+            decoding="async"
+          />
+        ) : (
+          <span className="poster-missing" aria-hidden="true">
+            {video.number}
+          </span>
+        )}
+        <span className="poster-num">{video.number}</span>
+        <span className="poster-platforms" aria-hidden="true">
+          <span className="poster-platform yt">YT</span>
+          <span className="poster-platform ig">IG</span>
+        </span>
+        <span className="poster-open" aria-hidden="true">
           <PlayIcon />
         </span>
       </span>
 
-      <div className="video-body">
+      <div className="poster-body">
         <h3>{video.title}</h3>
         <p>{video.description}</p>
-        <span className="video-watch">
+        <span className="poster-cta">
           WATCH EPISODE
           <ArrowUpRight />
         </span>
@@ -27,7 +46,7 @@ export default function VideoCard({ video, onOpen }) {
 
       <button
         type="button"
-        className="video-card-hit"
+        className="poster-hit"
         onClick={(e) => onOpen(video, e.currentTarget)}
         aria-haspopup="dialog"
         aria-label={label}

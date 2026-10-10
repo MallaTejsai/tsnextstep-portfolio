@@ -1,5 +1,5 @@
 import { NAV_LINKS, SITE, SOCIAL } from "../data/site";
-import { InstagramIcon, YoutubeIcon } from "./icons";
+import { InstagramIcon, MailIcon, YoutubeIcon } from "./icons";
 
 export default function Footer() {
   const go = (e, id) => {
@@ -27,6 +27,13 @@ export default function Footer() {
           </div>
 
           <div className="footer-socials">
+            <a
+              className="footer-social"
+              href={`mailto:${SITE.email}`}
+              aria-label={`Email — ${SITE.email}`}
+            >
+              <MailIcon />
+            </a>
             <a
               className="footer-social"
               href={SOCIAL.youtube.url}

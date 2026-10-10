@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { SITE } from "../data/site";
 import { asset } from "../lib/asset";
-import { ArrowRight, PlayIcon } from "./icons";
+import { ArrowRight, CoreIcon } from "./icons";
 
 const scrollTo = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -18,34 +19,40 @@ export default function Hero() {
         <div className="hero-copy-col">
           <span className="hero-badge">
             <span className="dot" aria-hidden="true" />
-            Tejsai / TS nextstep
+            Currently building ALLI
           </span>
 
           <h1 className="hero-title">
             <span className="line">
-              <span>Building AI.</span>
+              <span>Building My Future,</span>
             </span>
             <span className="line">
-              <span>Learning by building.</span>
-            </span>
-            <span className="line">
-              <span className="accent">Sharing the journey.</span>
+              <span className="accent">One Project at a Time.</span>
             </span>
           </h1>
 
           <p className="hero-copy">
-            I'm Tejsai — a student, developer and AI builder exploring AI, programming and
-            technology while documenting what I build.
+            I'm Tejsai, a Diploma CSE student exploring AI, programming and web development by
+            building real things.
           </p>
+
+          <ul className="hero-roles" aria-label="Roles">
+            {SITE.roles.map((role) => (
+              <li key={role}>{role}</li>
+            ))}
+          </ul>
 
           <div className="hero-actions">
             <button className="btn btn-primary" type="button" onClick={() => scrollTo("work")}>
-              EXPLORE MY WORK
+              Explore my work
               <ArrowRight />
             </button>
-            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("journey")}>
-              <PlayIcon />
-              WATCH MY JOURNEY
+            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("alli")}>
+              <CoreIcon />
+              Meet ALLI
+            </button>
+            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("contact")}>
+              Let's connect
             </button>
           </div>
 
@@ -57,28 +64,32 @@ export default function Hero() {
               </dd>
             </div>
             <div className="hero-stat">
-              <dt className="lbl">Roadmap</dt>
-              <dd className="num">
-                38<em>+</em> versions
-              </dd>
+              <dt className="lbl">Episodes</dt>
+              <dd className="num">08</dd>
             </div>
             <div className="hero-stat">
-              <dt className="lbl">Episodes published</dt>
-              <dd className="num">
-                8<em>+</em>
-              </dd>
+              <dt className="lbl">Focus</dt>
+              <dd className="num">Local AI</dd>
             </div>
           </dl>
         </div>
 
         <div className="hero-portrait">
-          <div className="portrait-ring" aria-hidden="true" />
+          <div className="portrait-stage" aria-hidden="true">
+            <span className="portrait-glow" />
+            <span className="orbit-ring ring-a" />
+            <span className="orbit-ring ring-b" />
+            <span className="float-label label-1">PYTHON</span>
+            <span className="float-label label-2">OLLAMA · LOCAL</span>
+            <span className="float-label label-3">QWEN</span>
+          </div>
+
           <div className="portrait-frame">
             {!imgMissing ? (
               <img
                 key={PORTRAIT_FILES[imgIndex]}
                 src={asset(PORTRAIT_FILES[imgIndex])}
-                alt="Tejsai — student, developer and AI builder"
+                alt="Tejsai Malla — Diploma CSE student building ALLI, a personal AI assistant"
                 width={760}
                 height={950}
                 loading="eager"
@@ -94,7 +105,35 @@ export default function Hero() {
               </div>
             )}
           </div>
-          <span className="portrait-tag">Student · Developer · AI Builder</span>
+
+          <span className="brand-chip">
+            <span className="brand-chip-mark" aria-hidden="true">
+              TS
+            </span>
+            TS nextstep
+          </span>
+
+          <aside className="alli-status" aria-label="ALLI project status summary">
+            <header>
+              <span className="alli-status-name">ALLI</span>
+              <span className="alli-status-version">v0.6 · in development</span>
+            </header>
+            <dl>
+              <div>
+                <dt>Runtime</dt>
+                <dd>Python</dd>
+              </div>
+              <div>
+                <dt>Model</dt>
+                <dd>Qwen via Ollama</dd>
+              </div>
+              <div>
+                <dt>Memory</dt>
+                <dd>v0.5 embeddings</dd>
+              </div>
+            </dl>
+            <p className="alli-status-note">Static project summary — not live telemetry.</p>
+          </aside>
         </div>
       </div>
 

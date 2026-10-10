@@ -3,26 +3,29 @@
    ============================================================ */
 
 :root {
-  --bg: #050505;
-  --bg-2: #0a0a0c;
-  --bg-3: #101014;
-  --panel: #0d0d10;
-  --panel-2: #141418;
+  --bg: #050507;
+  --bg-2: #08080c;
+  --bg-3: #0c0d13;
+  --panel: #0b0c11;
+  --panel-2: #12141b;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
 
-  --text: #f4f4f6;
-  --text-2: #a9a9b4;
-  --text-3: #85858f;
+  --text: #f2f4f9;
+  --text-2: #a6aab8;
+  --text-3: #7d8290;
 
-  --red: #ff2d3f;
-  --red-2: #ff5c68;
-  --red-deep: #c1121f;
-  --red-glow: rgba(255, 45, 63, 0.45);
-  /* deeper red for filled surfaces carrying white text (WCAG AA) */
-  --red-fill: #e01d2e;
-  --red-fill-deep: #a80f1c;
-  --red-soft: rgba(255, 45, 63, 0.12);
+  /* electric blue → violet accent system */
+  --blue: #4d8dff;
+  --blue-2: #8fb4ff;
+  --violet: #9b6bff;
+  --violet-deep: #5b3fe0;
+  --cyan: #38d9f5;
+  --glow: rgba(77, 141, 255, 0.45);
+  /* filled surfaces carrying white text (WCAG AA) */
+  --accent-fill: #2f6df0;
+  --accent-fill-deep: #4c37d6;
+  --accent-soft: rgba(77, 141, 255, 0.12);
 
   --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -30,10 +33,17 @@
   --nav-h: 72px;
   --radius: 14px;
   --radius-lg: 20px;
-  --container: 1200px;
+  --container: 1280px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --shadow-glow: 0 0 0 1px rgba(255, 45, 63, 0.25), 0 12px 48px rgba(255, 45, 63, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(77, 141, 255, 0.22), 0 12px 48px rgba(77, 141, 255, 0.12);
+}
+
+/* large monitors: a little more room without letting text lines run long */
+@media (min-width: 1600px) {
+  :root {
+    --container: 1360px;
+  }
 }
 
 *,
@@ -111,12 +121,12 @@ p {
 }
 
 ::selection {
-  background: var(--red);
+  background: var(--blue);
   color: #fff;
 }
 
 :focus-visible {
-  outline: 2px solid var(--red);
+  outline: 2px solid var(--blue);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -149,14 +159,14 @@ p {
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--red-2);
+  color: var(--blue-2);
 }
 
 .eyebrow::before {
   content: "";
   width: 26px;
   height: 1px;
-  background: linear-gradient(90deg, var(--red), transparent);
+  background: linear-gradient(90deg, var(--blue), transparent);
 }
 
 .section-title {
@@ -166,7 +176,7 @@ p {
 }
 
 .section-title .accent {
-  color: var(--red);
+  color: var(--blue);
 }
 
 .section-lead {
@@ -206,14 +216,14 @@ p {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--red-fill) 0%, var(--red-fill-deep) 100%);
+  background: linear-gradient(135deg, var(--accent-fill) 0%, var(--accent-fill-deep) 100%);
   color: #fff;
-  box-shadow: 0 10px 30px rgba(255, 45, 63, 0.28);
+  box-shadow: 0 10px 30px rgba(77, 141, 255, 0.28);
 }
 
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 40px rgba(255, 45, 63, 0.42);
+  box-shadow: 0 16px 40px rgba(77, 141, 255, 0.42);
 }
 
 .btn-primary:active {
@@ -228,8 +238,8 @@ p {
 }
 
 .btn-ghost:hover {
-  border-color: var(--red);
-  color: var(--red-2);
+  border-color: var(--blue);
+  color: var(--blue-2);
   transform: translateY(-3px);
 }
 
@@ -255,16 +265,14 @@ p {
 
 /* grid children stretch (reveal wrappers sit between grid and card) */
 .skills-grid > *,
-.content-grid > *,
-.video-grid > *,
+.poster-grid > *,
 .work-grid > *,
 .about-facts > * {
   height: 100%;
 }
 
 .skills-grid > * > .skill-group,
-.content-grid > * > .content-card,
-.video-grid > * > .video-card,
+.poster-grid > * > .poster-card,
 .work-grid > * > .project-card {
   height: 100%;
 }
@@ -289,8 +297,8 @@ p {
 .backdrop-grid {
   position: absolute;
   inset: -1px;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse 90% 70% at 50% 25%, #000 20%, transparent 78%);
 }
@@ -309,7 +317,7 @@ p {
   min-height: 320px;
   top: -12vw;
   right: -8vw;
-  background: radial-gradient(circle, rgba(255, 45, 63, 0.35), transparent 65%);
+  background: radial-gradient(circle, rgba(77, 141, 255, 0.3), transparent 65%);
 }
 
 .backdrop-orb-2 {
@@ -319,7 +327,7 @@ p {
   min-height: 260px;
   bottom: 8vh;
   left: -12vw;
-  background: radial-gradient(circle, rgba(120, 20, 40, 0.4), transparent 65%);
+  background: radial-gradient(circle, rgba(120, 70, 230, 0.34), transparent 65%);
 }
 
 .backdrop-grain {
@@ -338,7 +346,7 @@ p {
   height: 460px;
   margin: -230px 0 0 -230px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 45, 63, 0.16), transparent 62%);
+  background: radial-gradient(circle, rgba(77, 141, 255, 0.16), transparent 62%);
   pointer-events: none;
   z-index: 1;
   opacity: 0;
@@ -369,9 +377,9 @@ p {
 }
 
 .chip-live {
-  border-color: rgba(255, 45, 63, 0.5);
-  color: var(--red-2);
-  background: var(--red-soft);
+  border-color: rgba(77, 141, 255, 0.5);
+  color: var(--blue-2);
+  background: var(--accent-soft);
 }
 
 .chip-live::before {
@@ -379,20 +387,20 @@ p {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 0 0 var(--red-glow);
+  background: var(--blue);
+  box-shadow: 0 0 0 0 var(--glow);
   animation: pulse-dot 2s infinite;
 }
 
 @keyframes pulse-dot {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 45, 63, 0.55);
+    box-shadow: 0 0 0 0 rgba(77, 141, 255, 0.55);
   }
   70% {
-    box-shadow: 0 0 0 9px rgba(255, 45, 63, 0);
+    box-shadow: 0 0 0 9px rgba(77, 141, 255, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 45, 63, 0);
+    box-shadow: 0 0 0 0 rgba(77, 141, 255, 0);
   }
 }
 
@@ -404,7 +412,7 @@ p {
   left: 16px;
   z-index: 200;
   padding: 0.7rem 1.1rem;
-  background: var(--red-deep);
+  background: var(--accent-fill-deep);
   color: #fff;
   border-radius: 8px;
   font-weight: 600;
@@ -426,8 +434,10 @@ p {
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
   }
 
   .reveal {

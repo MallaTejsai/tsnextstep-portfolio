@@ -1,8 +1,15 @@
 import { useRef, useState } from "react";
 import { isContactConfigured, sendContactMessage } from "../lib/contact";
-import { SOCIAL } from "../data/site";
+import { SITE, SOCIAL } from "../data/site";
 import Reveal from "./Reveal";
-import { AlertIcon, CheckIcon, InstagramIcon, SendIcon, YoutubeIcon } from "./icons";
+import {
+  AlertIcon,
+  CheckIcon,
+  InstagramIcon,
+  MailIcon,
+  SendIcon,
+  YoutubeIcon,
+} from "./icons";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -99,6 +106,15 @@ export default function Contact() {
             </p>
 
             <div className="contact-points">
+              <a className="contact-point contact-point-link" href={`mailto:${SITE.email}`}>
+                <span className="fact-icon" aria-hidden="true">
+                  <MailIcon />
+                </span>
+                <div>
+                  <h3>Email</h3>
+                  <p>{SITE.email}</p>
+                </div>
+              </a>
               <div className="contact-point">
                 <span className="fact-icon" aria-hidden="true">
                   <SendIcon />
@@ -120,6 +136,10 @@ export default function Contact() {
             </div>
 
             <div className="contact-socials">
+              <a className="social-btn" href={`mailto:${SITE.email}`}>
+                <MailIcon />
+                EMAIL
+              </a>
               <a
                 className="social-btn"
                 href={SOCIAL.youtube.url}
@@ -246,8 +266,9 @@ export default function Contact() {
               ) : null}
 
               <p className="form-privacy">
-                Your details are only used to reply to you. No email address is shown on this
-                site.
+                Messages are delivered to me by email via Web3Forms. Your details are only used
+                to reply to you — or email me directly at{" "}
+                <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.
               </p>
             </form>
           </Reveal>

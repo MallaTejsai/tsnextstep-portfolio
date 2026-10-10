@@ -2,13 +2,18 @@ import { useEffect, useRef } from "react";
 import { ALLI_ROADMAP, CURRENT_VERSION, ROADMAP_DISCLAIMER } from "../data/alliRoadmap";
 import Reveal from "./Reveal";
 
+/* Built history rides the timeline; planned versions are listed separately so
+   nothing future is ever presented as part of the completed journey. */
+const HISTORY = ALLI_ROADMAP.filter((v) => v.status !== "future");
+const PLANNED = ALLI_ROADMAP.filter((v) => v.status === "future");
+
 const STATUS_LABEL = {
   past: "Earlier stage",
   current: "Current development",
   future: "Upcoming",
 };
 
-const CURRENT_INDEX = ALLI_ROADMAP.findIndex((v) => v.status === "current");
+const CURRENT_INDEX = HISTORY.findIndex((v) => v.status === "current");
 const HORIZONTAL_QUERY = "(min-width: 769px)";
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -240,26 +245,23 @@ export default function AlliRoadmap() {
     <div className="roadmap" id="roadmap">
       <Reveal className="roadmap-head">
         <div>
-          <span className="eyebrow">ALLI · Public roadmap</span>
+          <span className="eyebrow">The development story</span>
           <h2 className="section-title">
-            From <span className="accent">v0.1</span> to <span className="accent">v1.0</span>
+            From <span className="accent">v0.1</span> to <span className="accent">{CURRENT_VERSION}</span>
           </h2>
           <p className="section-lead">
-            The public development journey of ALLI, my personal AI assistant — ten milestones from
-            a basic chat loop to a personal PC assistant. Follow the line: development currently
-            stops at {CURRENT_VERSION}.
+            Every version ALLI has actually reached, in the order it happened. The line stops at{" "}
+            {CURRENT_VERSION} — the current development milestone. Everything after it is
+            planned, not built.
           </p>
         </div>
 
-        <div className="roadmap-legend" role="list" aria-label="Roadmap legend">
+        <div className="roadmap-legend" role="list" aria-label="Timeline legend">
           <span className="legend-item" role="listitem">
-            <span className="legend-swatch past" aria-hidden="true" /> Earlier stage
+            <span className="legend-swatch past" aria-hidden="true" /> Completed
           </span>
           <span className="legend-item" role="listitem">
             <span className="legend-swatch current" aria-hidden="true" /> Current development
-          </span>
-          <span className="legend-item" role="listitem">
-            <span className="legend-swatch future" aria-hidden="true" /> Upcoming
           </span>
         </div>
       </Reveal>
@@ -269,7 +271,7 @@ export default function AlliRoadmap() {
         ref={journeyRef}
         tabIndex={0}
         role="group"
-        aria-label={`ALLI public roadmap timeline, v0.1 to v1.0. Scroll to travel through it. Current development milestone: ${CURRENT_VERSION}.`}
+        aria-label={`ALLI version timeline, v0.1 to ${CURRENT_VERSION}. Scroll to travel through it. Current development milestone: ${CURRENT_VERSION}.`}
       >
         <div className="rm-rail" ref={railRef} aria-hidden="true">
           <span className="rm-rail-fill" ref={fillRef} />
@@ -277,7 +279,7 @@ export default function AlliRoadmap() {
         </div>
 
         <ol className="rm-track" ref={trackRef}>
-          {ALLI_ROADMAP.map((item, i) => (
+          {HISTORY.map((item, i) => (
             <li
               className={`rm-item is-${item.status}`}
               key={item.id}
@@ -294,11 +296,27 @@ export default function AlliRoadmap() {
 
                 <h3 className="rm-title">{item.title}</h3>
                 <p className="rm-summary">{item.summary}</p>
-
-                <div className="rm-foot">
-                  <span className="rm-label">{STATUS_LABEL[item.status]}</span>
-                </div>
               </article>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="rm-planned">
+        <div className="rm-planned-head">
+          <h3 className="rm-planned-title">Planned next</h3>
+          <p className="rm-planned-lead">
+            Roadmap only — none of these are built or released yet.
+          </p>
+        </div>
+        <ol className="rm-planned-list">
+          {PLANNED.map((item) => (
+            <li className="rm-planned-item" key={item.id}>
+              <span className="rm-planned-version">{item.version}</span>
+              <span className="rm-planned-body">
+                <strong>{item.title}</strong>
+                <span>{item.summary}</span>
+              </span>
             </li>
           ))}
         </ol>
@@ -308,8 +326,8 @@ export default function AlliRoadmap() {
 
       <p className="roadmap-disclaimer roadmap-disclaimer-2">
         {current
-          ? `${current.version} — ${current.title} is the current development milestone. Earlier versions are previous stages; everything from ${current.version} onward is roadmap.`
-          : "The current development milestone is marked on the roadmap."}
+          ? `${current.version} — ${current.title} is the current development milestone. v0.1 to ${CURRENT_VERSION} is built history; everything from ${PLANNED[0]?.version} onward is planned work.`
+          : "The current development milestone is marked on the timeline."}
       </p>
     </div>
   );

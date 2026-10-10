@@ -1,8 +1,12 @@
 /**
  * ALLI video series data — single source of truth.
  *
- * Add "Part 8", "Part 9", "Part 10"... by appending an object here.
- * The cards, counter and modal are all generated from this array.
+ * Add "Part 8", "Part 9"... by appending an object here: gallery card,
+ * counter and modal are all generated from this array.
+ *
+ * `poster` is the REAL cover artwork for the episode (the original YouTube
+ * Short thumbnail, cropped to the poster and stored in public/images/content/).
+ * Drop a new webp there and point `poster` at it — nothing else changes.
  *
  * NOTE: each episode's Instagram / YouTube pair must never be mixed up.
  */
@@ -10,6 +14,7 @@
 export const ALLI_VIDEOS = [
   {
     id: "introduction",
+    poster: "images/content/introduction.webp",
     number: "00",
     title: "INTRODUCTION",
     description: "Why I'm building my own personal AI assistant — the series begins.",
@@ -18,6 +23,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-1",
+    poster: "images/content/part-01.webp",
     number: "01",
     title: "PART 1",
     description: "The first connection — Python, Ollama and Qwen working together.",
@@ -26,6 +32,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-2",
+    poster: "images/content/part-02.webp",
     number: "02",
     title: "PART 2",
     description: "A basic interactive assistant with conversation handling.",
@@ -34,6 +41,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-3",
+    poster: "images/content/part-03.webp",
     number: "03",
     title: "PART 3",
     description: "Memory begins — ALLI starts remembering within a session.",
@@ -42,6 +50,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-4",
+    poster: "images/content/part-04.webp",
     number: "04",
     title: "PART 4",
     description: "Saving conversations to disk for real persistence.",
@@ -50,6 +59,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-5",
+    poster: "images/content/part-05.webp",
     number: "05",
     title: "PART 5",
     description: "Long-term memory — storing important personal information.",
@@ -58,6 +68,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-6",
+    poster: "images/content/part-06.webp",
     number: "06",
     title: "PART 6",
     description: "Semantic memory — embeddings and vector retrieval.",
@@ -66,6 +77,7 @@ export const ALLI_VIDEOS = [
   },
   {
     id: "part-7",
+    poster: "images/content/part-07.webp",
     number: "07",
     title: "PART 7",
     description: "The intelligent memory engine — extraction, validation and retrieval.",

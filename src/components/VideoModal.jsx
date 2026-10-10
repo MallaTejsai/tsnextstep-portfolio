@@ -85,6 +85,19 @@ export default function VideoModal({ video, onClose, originRef }) {
           <CloseIcon />
         </button>
 
+        {video.poster ? (
+          <span className="modal-poster">
+            <img
+              src={video.poster}
+              alt={`${video.title} cover artwork`}
+              width={1000}
+              height={1200}
+              loading="lazy"
+              decoding="async"
+            />
+          </span>
+        ) : null}
+
         <p className="modal-eyebrow">{watchLabel}</p>
         <h2 id="video-modal-title">{video.title}</h2>
         <p id="video-modal-desc">Choose where you want to watch this episode.</p>

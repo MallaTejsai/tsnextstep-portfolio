@@ -2,8 +2,11 @@
 
 export const SITE = {
   name: "Tejsai",
+  fullName: "Tejsai Malla",
   brand: "TS nextstep",
-  roles: ["Student", "Developer", "AI Builder", "Content Creator"],
+  roles: ["Student Developer", "AI Builder", "Content Creator"],
+  storyLine: ["Student", "Builder", "AI Developer"],
+  email: "tejsaimalla2009@gmail.com",
   footerTagline: "Building. Learning. Sharing.",
   copyright: "© 2026 Tejsai / TS nextstep",
 };
@@ -17,7 +20,7 @@ export const SOCIAL = {
   instagram: {
     label: "Instagram",
     handle: "@tsnextstep",
-    url: "https://www.instagram.com/tsnextstep?stkn=MXd2cTRraWsyankxMg==",
+    url: "https://instagram.com/tsnextstep",
   },
 };
 

@@ -45,40 +45,50 @@ export function useReveal(options = {}) {
 }
 
 /**
- * Generic IntersectionObserver hook: fires callback whenever targets change state.
- * Used for scroll-spy navigation and roadmap progress.
+ * Scroll-spy: returns the id of the section currently under the reading line.
+ *
+ * A plain IntersectionObserver with ratio thresholds fails here — sections are
+ * wildly different heights (the ALLI block is ~3x a normal section), so tall
+ * ones never cross the first threshold and never become active. Instead we
+ * track the last section whose top has passed a line about 30% down the
+ * viewport, which always matches what the reader is looking at.
  */
 export function useSectionSpy(ids) {
   const [active, setActive] = useState(ids[0] || "");
 
   useEffect(() => {
-    if (!("IntersectionObserver" in window)) return undefined;
+    const key = ids.join("|");
+    const live = key.split("|").filter((id) => document.getElementById(id));
+    if (!live.length) return undefined;
 
-    const visible = new Map();
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          visible.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
-        });
-        let best = "";
-        let bestRatio = 0;
-        visible.forEach((ratio, id) => {
-          if (ratio > bestRatio) {
-            bestRatio = ratio;
-            best = id;
-          }
-        });
-        if (best) setActive(best);
-      },
-      { threshold: [0.15, 0.35, 0.6], rootMargin: "-15% 0px -45% 0px" }
-    );
+    let raf = 0;
 
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
-    });
+    const update = () => {
+      raf = 0;
+      const line = window.innerHeight * 0.3;
+      let best = live[0];
+      for (const id of live) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= line) best = id;
+        else break; // sections are in document order
+      }
+      setActive((prev) => (prev === best ? prev : best));
+    };
 
-    return () => io.disconnect();
+    const onMove = () => {
+      if (!raf) raf = window.requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onMove, { passive: true });
+    window.addEventListener("resize", onMove);
+
+    return () => {
+      window.removeEventListener("scroll", onMove);
+      window.removeEventListener("resize", onMove);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
   }, [ids.join("|")]);
 
   return active;
