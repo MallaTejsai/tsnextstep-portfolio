@@ -31,7 +31,11 @@ export const PROJECTS = [
       "My personal developer portfolio, built and rebuilt while learning web development — the site you are reading right now.",
     tags: ["HTML", "CSS", "JavaScript", "React", "Vite"],
     links: [
-      { label: "LIVE SITE", href: "https://mallatejsai.github.io/portfolio-v2/", external: true },
+      {
+        label: "SOURCE REPO",
+        href: "https://github.com/MallaTejsai/tsnextstep-portfolio",
+        external: true,
+      },
     ],
   },
   {

@@ -9,6 +9,7 @@ import "./styles/sections.css";
 import "./styles/alli.css";
 import "./styles/journey.css";
 import "./styles/contact-footer.css";
+import "./styles/upgrade.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

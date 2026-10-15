@@ -6,8 +6,12 @@
   "description": "Tejsai / TS nextstep — premium AI builder & developer portfolio",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "npm run validate:resources && vite build",
+    "preview": "vite preview",
+    "studio": "vite --config tools/resource-studio/vite.config.js --host 127.0.0.1 --port 4174",
+    "studio:build": "vite build --config tools/resource-studio/vite.config.js",
+    "validate:resources": "node scripts/validate-resources.mjs",
+    "test:resources": "node scripts/test-resources.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

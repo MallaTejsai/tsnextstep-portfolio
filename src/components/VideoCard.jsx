@@ -1,4 +1,5 @@
 import { ArrowUpRight, PlayIcon } from "./icons";
+import { asset } from "../lib/asset";
 
 /**
  * Poster gallery card for one episode.
@@ -13,7 +14,7 @@ export default function VideoCard({ video, onOpen, eager = false }) {
       <span className="poster-media">
         {video.poster ? (
           <img
-            src={video.poster}
+            src={asset(video.poster)}
             alt={`${video.title} — cover artwork for the ALLI build series`}
             width={1000}
             height={1200}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
+import { asset } from "../lib/asset";
 import { CloseIcon, InstagramIcon, YoutubeIcon } from "./icons";
 
 const FOCUSABLE =
@@ -88,7 +89,7 @@ export default function VideoModal({ video, onClose, originRef }) {
         {video.poster ? (
           <span className="modal-poster">
             <img
-              src={video.poster}
+              src={asset(video.poster)}
               alt={`${video.title} cover artwork`}
               width={1000}
               height={1200}

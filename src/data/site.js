@@ -32,5 +32,6 @@ export const NAV_LINKS = [
   { id: "journey", label: "JOURNEY" },
   { id: "skills", label: "SKILLS" },
   { id: "content", label: "CONTENT" },
+  { id: "resources", label: "TOOLKIT" },
   { id: "contact", label: "CONTACT" },
 ];

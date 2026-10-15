@@ -7,6 +7,7 @@ import Alli from "./components/Alli";
 import Journey from "./components/Journey";
 import Skills from "./components/Skills";
 import Content from "./components/Content";
+import ResourceHub from "./components/ResourceHub";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
 
@@ -28,6 +29,7 @@ export default function App() {
         <Journey />
         <Skills />
         <Content />
+        <ResourceHub />
         <Contact />
       </main>
 

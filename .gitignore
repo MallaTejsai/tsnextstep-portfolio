@@ -3,6 +3,7 @@ node_modules/
 
 # Build output (dist/ is COMMITTED so GitHub Pages can serve the single-file build)
 dist-ssr/
+.resource-studio-dist/
 *.local
 
 # Environment (never commit real endpoints)

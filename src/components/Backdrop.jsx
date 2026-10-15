@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Full-page ambient layers: grid, red orbs, grain, particle canvas
- * and a cursor-following red glow.
+ * Full-page ambient layers: grid, blue/violet orbs, grain, particle canvas
+ * and a cursor-following blue glow.
  * All layers are pointer-events: none, so interaction is untouched.
  */
 export default function Backdrop() {
@@ -80,7 +80,7 @@ export default function Backdrop() {
         }
       }
 
-      raf = window.requestAnimationFrame(draw);
+      if (!reduce) raf = window.requestAnimationFrame(draw);
     };
 
     resize();
@@ -98,6 +98,7 @@ export default function Backdrop() {
     const glow = glowRef.current;
     if (!glow) return undefined;
     if (!window.matchMedia("(pointer: fine)").matches) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
 
     let x = 0;
     let y = 0;

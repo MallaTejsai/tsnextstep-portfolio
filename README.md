@@ -13,6 +13,12 @@ data-driven, mobile-first and accessible.
   **Planned next** list for v0.7 → v1.0 — future work is never presented as built
 - Video series library: **8 episodes** shown with their **real cover artwork**, each opening a
   platform picker (YouTube / Instagram)
+- **Resources & Digital Toolkit**: a featured, searchable and filterable index of the verified
+  ALLI field notes, plus honest Prompt Library and PDF/download empty states ready for approved
+  public material
+- Local-only **Resource Studio** for drag-and-drop files, visual metadata editing, previews,
+  keyboard-accessible reordering, local draft recovery, validated catalog export and optional
+  repository-folder writing through the browser File System Access API
 - Journey timeline (education, learning, ALLI, what's next) and a 4-project showcase
 - Contact: email is shown (`mailto:`), social links, and a **Web3Forms** contact form with
   validation and sending/success/error states
@@ -24,8 +30,9 @@ data-driven, mobile-first and accessible.
 ```bash
 npm install          # if esbuild's postinstall was skipped: node node_modules/esbuild/install.js
 npm run dev          # dev server → http://localhost:5173
-npm run build        # production build → dist/ (one self-contained index.html + images/)
+npm run build        # validates resources, then builds dist/
 npm run preview      # serve the production build locally
+npm run studio       # owner-only local Resource Studio → http://127.0.0.1:4174
 ```
 
 **Opening from disk:** `npm run build` inlines all JS and CSS into a single
@@ -44,25 +51,31 @@ portfolio/
 ├── public/
 │   ├── favicon.svg
 │   ├── img.jpeg               # shipped portrait (img.png tried as fallback)
-│   └── images/content/        # real episode cover artwork (intro + part-01…07)
+│   ├── images/content/        # real episode cover artwork (intro + part-01…07)
+│   └── assets/resources/      # generated public manifest and public resource folders
 └── src/
     ├── main.jsx               # entry + style imports
     ├── App.jsx                # section composition
     ├── components/            # Navbar, Hero, About, Work, Alli, AlliScene, AlliArchitecture,
-    │                          # AlliRoadmap, Journey, Skills, Content, Contact, Footer,
-    │                          # VideoCard, VideoModal, Reveal, icons
+    │                          # AlliRoadmap, Journey, Skills, Content, ResourceHub, Contact,
+    │                          # Footer, VideoCard, VideoModal, Reveal, icons
     ├── data/
     │   ├── site.js            # identity, roles, email, social links, nav
     │   ├── alliRoadmap.js     # completed history (v0.1 → v0.6) + planned list (v0.7 → v1.0)
     │   ├── alliArchitecture.js# USER → RESPONSE flow used by the interactive diagram
     │   ├── alliVideos.js      # 8 episodes with exact IG/YT links + poster paths
     │   ├── journey.js         # timeline, education, current focus
-    │   ├── projects.js        # 4 projects (ALLI featured)
+    │   ├── resourceCatalog.json        # authoritative owner catalog
+    │   ├── resourceCatalog.public.json  # generated published-only catalog
+    │   ├── projects.js        # verified projects (ALLI featured)
+    │   ├── resources.js       # public catalog adapter and derived filters
     │   └── skills.js          # skill groups
     ├── hooks/                 # useReveal (scroll reveal + scroll-spy), useBodyScrollLock
     ├── lib/                   # contact.js (form submit), asset.js (public/ asset paths)
-    └── styles/                # base, navbar-hero, sections, alli (scene/architecture/roadmap),
-                               # journey, contact-footer
+    └── styles/                # base, navbar-hero, sections, alli, journey, resources,
+                               # contact-footer and upgrade art direction
+tools/resource-studio/         # local-only owner UI; never imported by the public app
+scripts/validate-resources.mjs # validates source catalog and generates public manifests
 ```
 
 ## Your portrait
@@ -105,10 +118,12 @@ prevention. Without a key the form still validates, then shows the standard
 
 | What to change | File |
 |---|---|
-| Add an episode (Part 8, 9, …) | `src/data/alliVideos.js` — append an object; cards, counter and modal update automatically |
+| Add or edit a resource | Run `npm run studio` — add files, edit details, reorder, preview, then export or save to the repository |
 | Change the roadmap | `src/data/alliRoadmap.js` — `HISTORY` (built, up to v0.6) and `PLANNED` (future, v0.7 → v1.0) |
 | Architecture flow steps | `src/data/alliArchitecture.js` — keep the USER → RESPONSE order honest |
 | Projects, journey, skills, social URLs, nav | `src/data/projects.js`, `journey.js`, `skills.js`, `site.js` |
+| Resource source of truth | `src/data/resourceCatalog.json` — normally changed by Resource Studio, not by hand |
+| Generated public manifests | `src/data/resourceCatalog.public.json`, `public/assets/resources/resources.json` — regenerated by `npm run validate:resources` |
 
 **Honesty rules (please keep):**
 
@@ -120,6 +135,33 @@ prevention. Without a key the form still validates, then shows the standard
 - Don't invent GitHub or live-demo URLs — only link what actually exists.
 
 **Video link rules:** each episode's Instagram and YouTube URLs must never be swapped.
+
+## Resource Studio workflow
+
+The public portfolio never contains admin controls. Resource management runs as a separate local
+tool:
+
+```bash
+npm run studio
+```
+
+Then open `http://127.0.0.1:4174`.
+
+1. Drop a PDF, prompt file, note or cover image into the Studio.
+2. Select the new draft and use **Edit Details** to change its display title, description,
+   category, tags, cover and visibility. The display title is separate from the real filename.
+3. Use the grip to drag rows, or use **Move Up** / **Move Down** for keyboard-accessible ordering.
+4. Preview the file, then click **Export for Website**. The Studio validates IDs, categories, paths,
+   file types, file references and public visibility before creating a ZIP overlay package.
+5. Review the package, copy it into the repository, run `npm run build`, inspect `dist/`, and use
+   the existing GitHub Pages deployment process. Nothing is published by the Studio itself.
+
+The Studio keeps a recoverable draft in browser IndexedDB. This is only a local editing convenience,
+not a publishing backend. **Save to repository** is available on localhost in browsers that support
+the File System Access API; otherwise use the validated ZIP export. Existing files are not deleted
+automatically, and imports download a catalog backup before replacing the local draft.
+
+See `public/assets/resources/README.md` for the resource folder rules and package review checklist.
 
 ## SEO
 
@@ -139,8 +181,9 @@ prevention. Without a key the form still validates, then shows the standard
 
 ## Deploying
 
-Build is a single self-contained `dist/index.html` plus `dist/images/` (`base: "./"` + inlined
-assets, so it works from any path, any host, or straight from disk):
+Build produces a self-contained `dist/index.html` plus the required public asset folders such as
+`dist/images/` and `dist/assets/resources/` (`base: "./"` + inlined JS/CSS, so it works from any
+path or static host):
 
 ```bash
 npm run build
@@ -152,13 +195,13 @@ npm run build
 
 ## Verification
 
-Verified with `npm run build` and a Playwright pass over the production build:
+The repository has no checked-in browser test runner, lint script or typecheck script. The
+smallest reproducible production check is:
 
-- viewports 1920 / 1440 / 1366 / 1024 / 768 / 390 / 360 — no console or runtime errors, no
-  failed requests, no horizontal overflow, all 8 posters load
-- roadmap fits without scrolling at ≥1366px (v0.6 always visible), scrolls 769–1365px, becomes a
-  vertical timeline below that
-- `prefers-reduced-motion`: zero running animations
-- scroll-spy highlights the correct section everywhere (including the tall ALLI block)
-- poster modal opens with Enter, traps focus, closes with Esc and returns focus; architecture
-  steps switch the `aria-live` detail panel; mobile menu toggles with `aria-expanded`
+```bash
+npm run build
+```
+
+For resource-specific maintenance and manual checks, see
+`public/assets/resources/README.md`. The resource UI uses local catalog data and relative asset
+paths, so it does not need a backend or API key to search, filter or open published material.

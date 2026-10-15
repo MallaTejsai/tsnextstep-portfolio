@@ -33,7 +33,7 @@ export default function About() {
           <Reveal className="about-copy">
             <span className="eyebrow">About</span>
             <h2 className="section-title" id="about-title">
-              Student. Developer. <span className="accent">AI Builder.</span>
+              Curious by default. <span className="accent">Practical by choice.</span>
             </h2>
             <p>
               I'm <strong>Tejsai</strong>, also known as <strong>TS nextstep</strong>. I spend my
@@ -41,10 +41,10 @@ export default function About() {
               I build while I build it.
             </p>
             <p>
-              My main project is <strong>ALLI</strong>, a personal AI assistant I'm developing from
-              the ground up. It started as a basic chatbot and is growing into something with real
-              memory, reasoning and tools. Alongside that, I create content about the process so
-              other learners can see how a project like this actually comes together.
+              <strong>ALLI</strong> is one important thread in that journey — a personal AI assistant
+              I am developing from the ground up. Around it, I am learning web development,
+              programming, video editing and the habits that turn an idea into something another
+              person can actually use.
             </p>
 
             <div className="roles" aria-label="Roles">

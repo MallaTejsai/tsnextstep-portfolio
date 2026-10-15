@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { SITE } from "../data/site";
+import { ALLI_VIDEOS } from "../data/alliVideos";
+import { SKILL_GROUPS } from "../data/skills";
 import { asset } from "../lib/asset";
-import { ArrowRight, CoreIcon } from "./icons";
+import { ArrowRight, ArrowUpRight, CoreIcon } from "./icons";
 
 const scrollTo = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -17,23 +19,27 @@ export default function Hero() {
     <section className="hero" id="home" aria-label="Introduction">
       <div className="hero-inner">
         <div className="hero-copy-col">
-          <span className="hero-badge">
-            <span className="dot" aria-hidden="true" />
-            Currently building ALLI
-          </span>
+          <div className="hero-kicker-row">
+            <span className="hero-badge">
+              <span className="dot" aria-hidden="true" />
+              Building in public
+            </span>
+            <span className="hero-index">01 / PORTFOLIO</span>
+          </div>
 
           <h1 className="hero-title">
             <span className="line">
-              <span>Building My Future,</span>
+              <span>Learning in public.</span>
             </span>
             <span className="line">
-              <span className="accent">One Project at a Time.</span>
+              <span className="accent">Building what's next.</span>
             </span>
           </h1>
 
           <p className="hero-copy">
-            I'm Tejsai, a Diploma CSE student exploring AI, programming and web development by
-            building real things.
+            I'm Tejsai — a Diploma CSE student exploring Python, AI, web development and creative
+            technology by making real projects, sharing what I discover and turning useful notes
+            into resources for other learners.
           </p>
 
           <ul className="hero-roles" aria-label="Roles">
@@ -47,29 +53,28 @@ export default function Hero() {
               Explore my work
               <ArrowRight />
             </button>
-            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("alli")}>
-              <CoreIcon />
-              Meet ALLI
+            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("resources")}>
+              Open the toolkit
+              <ArrowUpRight />
             </button>
-            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("contact")}>
-              Let's connect
+            <button className="hero-text-link" type="button" onClick={() => scrollTo("alli")}>
+              <CoreIcon />
+              See the ALLI thread
             </button>
           </div>
 
           <dl className="hero-stats">
             <div className="hero-stat">
-              <dt className="lbl">Current build</dt>
-              <dd className="num">
-                <em>v0.6</em> ALLI
-              </dd>
+              <dt className="lbl">Public build notes</dt>
+              <dd className="num"><em>{String(ALLI_VIDEOS.length).padStart(2, "0")}</em> episodes</dd>
             </div>
             <div className="hero-stat">
-              <dt className="lbl">Episodes</dt>
-              <dd className="num">08</dd>
+              <dt className="lbl">Learning areas</dt>
+              <dd className="num"><em>{String(SKILL_GROUPS.length).padStart(2, "0")}</em> in motion</dd>
             </div>
             <div className="hero-stat">
-              <dt className="lbl">Focus</dt>
-              <dd className="num">Local AI</dd>
+              <dt className="lbl">Current thread</dt>
+              <dd className="num">ALLI <em>v0.6</em></dd>
             </div>
           </dl>
         </div>
@@ -79,9 +84,9 @@ export default function Hero() {
             <span className="portrait-glow" />
             <span className="orbit-ring ring-a" />
             <span className="orbit-ring ring-b" />
-            <span className="float-label label-1">PYTHON</span>
-            <span className="float-label label-2">OLLAMA · LOCAL</span>
-            <span className="float-label label-3">QWEN</span>
+            <span className="float-label label-1">PYTHON / AI</span>
+            <span className="float-label label-2">TS NEXTSTEP</span>
+            <span className="float-label label-3">MAKE + SHARE</span>
           </div>
 
           <div className="portrait-frame">
@@ -89,7 +94,7 @@ export default function Hero() {
               <img
                 key={PORTRAIT_FILES[imgIndex]}
                 src={asset(PORTRAIT_FILES[imgIndex])}
-                alt="Tejsai Malla — Diploma CSE student building ALLI, a personal AI assistant"
+                alt="Tejsai Malla — Diploma CSE student and TS nextstep creator"
                 width={760}
                 height={950}
                 loading="eager"
@@ -132,7 +137,7 @@ export default function Hero() {
                 <dd>v0.5 embeddings</dd>
               </div>
             </dl>
-            <p className="alli-status-note">Static project summary — not live telemetry.</p>
+            <p className="alli-status-note">A project snapshot — not live telemetry.</p>
           </aside>
         </div>
       </div>
