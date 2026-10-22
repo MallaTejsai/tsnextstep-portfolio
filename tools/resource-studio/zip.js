@@ -1,5 +1,12 @@
+import { isSafeRelativePath, resourcePathKey } from "../../src/lib/resourceValidation.js";
+
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+const nameDecoder = new TextDecoder("utf-8", { fatal: true });
+const MAX_ZIP_BYTES = 32 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 256;
+const MAX_ZIP_ENTRY_BYTES = 20 * 1024 * 1024;
+const MAX_ZIP_TOTAL_BYTES = 24 * 1024 * 1024;
 
 function bytesOf(value) {
   if (value instanceof Uint8Array) return value;
@@ -41,9 +48,23 @@ export function crc32(bytes) {
 }
 
 export async function createZip(entries) {
+  if (!Array.isArray(entries) || entries.length > MAX_ZIP_ENTRIES) {
+    throw new Error(`ZIP packages may contain at most ${MAX_ZIP_ENTRIES} entries.`);
+  }
   const prepared = [];
+  const names = new Set();
+  let totalBytes = 0;
   for (const entry of entries) {
+    if (!entry || !isSafeZipName(entry.name)) {
+      throw new Error(`Unsafe ZIP entry name: ${entry?.name || "(empty)"}`);
+    }
+    if (names.has(resourcePathKey(entry.name))) throw new Error("ZIP package contains a duplicate entry or path alias.");
     const bytes = entry.data instanceof Blob ? new Uint8Array(await entry.data.arrayBuffer()) : bytesOf(entry.data);
+    if (bytes.length > MAX_ZIP_ENTRY_BYTES || totalBytes + bytes.length > MAX_ZIP_TOTAL_BYTES) {
+      throw new Error("ZIP package contents exceed the safe export limit.");
+    }
+    names.add(resourcePathKey(entry.name));
+    totalBytes += bytes.length;
     prepared.push({ name: entry.name, nameBytes: textEncoder.encode(entry.name), bytes, crc: crc32(bytes) });
   }
 
@@ -106,40 +127,88 @@ export async function createZip(entries) {
   writeU32(endView, 16, centralOffset);
   writeU16(endView, 20, 0);
 
-  return new Blob([...localParts, ...centralParts, new Uint8Array(end)], { type: "application/zip" });
+  const result = new Blob([...localParts, ...centralParts, new Uint8Array(end)], { type: "application/zip" });
+  if (result.size > MAX_ZIP_BYTES) throw new Error("The ZIP package is larger than 32 MB.");
+  return result;
 }
 
 function isSafeZipName(name) {
-  return Boolean(name) && !name.startsWith("/") && !name.includes("\\") && !name.includes("..") && !/^[a-z]+:/i.test(name);
+  return isSafeRelativePath(name) && textEncoder.encode(name).length <= 255;
 }
 
 export async function readZip(blob) {
   const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (bytes.length > MAX_ZIP_BYTES) throw new Error("The ZIP package is larger than 32 MB.");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const files = new Map();
+  const names = new Set();
+  const localEntries = [];
+  let totalBytes = 0;
   let offset = 0;
 
   while (offset + 4 <= bytes.length) {
     const signature = readU32(view, offset);
     if (signature === 0x06054b50 || signature === 0x02014b50) break;
+    if (localEntries.length >= MAX_ZIP_ENTRIES) throw new Error(`ZIP packages may contain at most ${MAX_ZIP_ENTRIES} entries.`);
     if (signature !== 0x04034b50) throw new Error("This ZIP package has an unsupported structure.");
+    if (offset + 30 > bytes.length) throw new Error("ZIP local header is truncated.");
     const flags = readU16(view, offset + 6);
     const method = readU16(view, offset + 8);
+    const expectedCrc = readU32(view, offset + 14);
     const compressedSize = readU32(view, offset + 18);
+    const uncompressedSize = readU32(view, offset + 22);
     const nameLength = readU16(view, offset + 26);
     const extraLength = readU16(view, offset + 28);
     if (flags !== 0 || method !== 0) throw new Error("This package uses compression or encryption that the Studio cannot import.");
     const nameStart = offset + 30;
-    const name = textDecoder.decode(bytes.slice(nameStart, nameStart + nameLength));
+    if (nameStart + nameLength + extraLength > bytes.length) throw new Error("ZIP entry header is truncated.");
+    const name = nameDecoder.decode(bytes.slice(nameStart, nameStart + nameLength));
     if (!isSafeZipName(name)) throw new Error(`Unsafe path in import package: ${name}`);
     const dataStart = nameStart + nameLength + extraLength;
     const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) throw new Error(`ZIP entry is truncated: ${name}`);
-    files.set(name, bytes.slice(dataStart, dataEnd));
+    if (dataEnd > bytes.length || uncompressedSize !== compressedSize) throw new Error(`ZIP entry is truncated or inconsistent: ${name}`);
+    if (compressedSize > MAX_ZIP_ENTRY_BYTES || totalBytes + compressedSize > MAX_ZIP_TOTAL_BYTES) throw new Error("ZIP package contents exceed the safe import limit.");
+    if (names.has(resourcePathKey(name))) throw new Error("ZIP package contains a duplicate entry or path alias.");
+    const data = bytes.slice(dataStart, dataEnd);
+    if (crc32(data) !== expectedCrc) throw new Error(`ZIP entry checksum failed: ${name}`);
+    files.set(name, data);
+    names.add(resourcePathKey(name));
+    localEntries.push({ name, offset, crc: expectedCrc, size: compressedSize });
+    totalBytes += compressedSize;
     offset = dataEnd;
   }
 
   if (!files.size) throw new Error("The ZIP package did not contain any files.");
+
+  const centralDirectoryOffset = offset;
+  let endOffset = -1;
+  for (let candidate = Math.max(centralDirectoryOffset, bytes.length - 65557); candidate + 22 <= bytes.length; candidate += 1) {
+    if (readU32(view, candidate) === 0x06054b50) endOffset = candidate;
+  }
+  if (endOffset < 0) throw new Error("ZIP end record is missing or malformed.");
+  const entryCount = readU16(view, endOffset + 10);
+  const centralSize = readU32(view, endOffset + 12);
+  const centralOffset = readU32(view, endOffset + 16);
+  const commentLength = readU16(view, endOffset + 20);
+  if (readU16(view, endOffset + 4) !== 0 || readU16(view, endOffset + 6) !== 0 || readU16(view, endOffset + 8) !== entryCount || entryCount !== localEntries.length || centralOffset !== centralDirectoryOffset || centralOffset + centralSize !== endOffset || endOffset + 22 + commentLength !== bytes.length) {
+    throw new Error("ZIP central directory does not match the local entries.");
+  }
+  let centralCursor = centralOffset;
+  for (const local of localEntries) {
+    if (centralCursor + 46 > bytes.length || readU32(view, centralCursor) !== 0x02014b50) throw new Error("ZIP central directory entry is malformed.");
+    const centralCrc = readU32(view, centralCursor + 16);
+    const centralSizeValue = readU32(view, centralCursor + 24);
+    const centralNameLength = readU16(view, centralCursor + 28);
+    const centralExtraLength = readU16(view, centralCursor + 30);
+    const centralCommentLength = readU16(view, centralCursor + 32);
+    const localOffset = readU32(view, centralCursor + 42);
+    if (centralCursor + 46 + centralNameLength + centralExtraLength + centralCommentLength > bytes.length) throw new Error("ZIP central directory entry is truncated.");
+    const centralName = nameDecoder.decode(bytes.slice(centralCursor + 46, centralCursor + 46 + centralNameLength));
+    const unixType = (readU32(view, centralCursor + 38) >>> 16) & 0xf000;
+    if (readU16(view, centralCursor + 8) !== 0 || readU16(view, centralCursor + 10) !== 0 || readU16(view, centralCursor + 34) !== 0 || (unixType !== 0 && unixType !== 0x8000) || (readU32(view, centralCursor + 38) & 0x10) || readU32(view, centralCursor + 20) !== local.size || centralName !== local.name || centralCrc !== local.crc || centralSizeValue !== local.size || localOffset !== local.offset) throw new Error(`ZIP central directory verification failed: ${local.name}`);
+    centralCursor += 46 + centralNameLength + centralExtraLength + centralCommentLength;
+  }
+  if (centralCursor !== centralOffset + centralSize) throw new Error("ZIP central directory size is inconsistent.");
   return files;
 }
 

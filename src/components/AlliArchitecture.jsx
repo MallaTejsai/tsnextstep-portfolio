@@ -17,7 +17,7 @@ export default function AlliArchitecture() {
       <div className="arch-head">
         <span className="eyebrow">Under the hood</span>
         <h3 className="arch-title">
-          How a message travels through <span className="accent">ALLI</span>
+          How a message travels through ALLI
         </h3>
         <p className="arch-lead">
           Select any step to see what happens there. It is the same path every time you talk to
@@ -44,6 +44,7 @@ export default function AlliArchitecture() {
                   type="button"
                   className={`arch-node${isActive ? " is-active" : ""}`}
                   aria-pressed={isActive}
+                  aria-controls="alli-architecture-detail"
                   onClick={() => setActiveId(node.id)}
                 >
                   <span className="arch-index">{node.index}</span>
@@ -55,7 +56,7 @@ export default function AlliArchitecture() {
           })}
         </div>
 
-        <aside className="arch-panel" aria-live="polite">
+        <aside className="arch-panel" id="alli-architecture-detail" aria-live="polite">
           <span className="arch-panel-eyebrow">
             Step {active.index} · {active.role}
           </span>

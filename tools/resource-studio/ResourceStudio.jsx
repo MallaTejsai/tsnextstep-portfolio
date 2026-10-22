@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import initialCatalogJson from "../../src/data/resourceCatalog.json";
 import {
   DEFAULT_CATEGORIES,
   FILE_RULES,
   getCategoryLabel,
   getKindFromFile,
+  isAllowedCoverPath,
   isAllowedFilePath,
   moveResource,
   normalizeCatalog,
@@ -16,12 +16,16 @@ import {
   uniqueResourcePath,
   validateCatalog,
   validateUploadFile,
+  withDisplayOrder,
 } from "../../src/lib/resourceValidation.js";
 import { loadDraft, saveDraft } from "./storage.js";
 import { createZip, decodeText, readZip } from "./zip.js";
 import "./resource-studio.css";
 
-const INITIAL_CATALOG = normalizeCatalog(initialCatalogJson);
+// The bridge is the project source of truth. Importing the authoring JSON here
+// caused Vite to remount Studio during its own saves, losing the active editor.
+// It also embedded private drafts into Studio's compiled JavaScript.
+const INITIAL_CATALOG = normalizeCatalog({ resources: [] });
 const STUDIO_FILTERS = [
   { id: "all", label: "All" },
   { id: "pdf", label: "PDFs" },
@@ -40,6 +44,55 @@ const MIME_BY_EXTENSION = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
 };
+const BRIDGE_URL = "http://127.0.0.1:4175";
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Client-side file existence for `validateCatalog`.
+ *
+ * The Studio only holds bridge-managed files (`public/assets/resources/**`
+ * and `.resource-studio/drafts/**`) in local state. Legacy cover images under
+ * `public/images/content/` are intentionally not shipped to the browser, so
+ * the Studio cannot verify them and must not block a save when it sees one.
+ * The bridge stays authoritative: it re-checks every reference against the
+ * real filesystem and reports a genuinely missing cover as a visible error.
+ */
+function projectAssetExists(relativePath, files) {
+  if (!relativePath) return true;
+  if (files?.[relativePath]) return true;
+  return isAllowedCoverPath(relativePath) && !isAllowedFilePath(relativePath);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+async function encodeBridgeFiles(files) {
+  return Promise.all(Object.entries(files || {}).filter(([, file]) => file).map(async ([filePath, file]) => ({
+    path: filePath,
+    name: file.name || filePath.split("/").pop(),
+    type: file.type || mimeForPath(filePath),
+    base64: bytesToBase64(new Uint8Array(await file.arrayBuffer())),
+  })));
+}
+
+function decodeBridgeFiles(files) {
+  return Object.fromEntries(Object.entries(files || {}).map(([filePath, record]) => [
+    filePath,
+    new File([base64ToBytes(record.base64)], record.name || filePath.split("/").pop(), { type: record.type || mimeForPath(filePath) }),
+  ]));
+}
 
 function Icon({ name }) {
   const paths = {
@@ -123,6 +176,51 @@ function mimeForPath(path) {
   return MIME_BY_EXTENSION[extensionOf(path)] || "application/octet-stream";
 }
 
+function publishedStagedPaths(catalog, files) {
+  const referenced = new Set();
+  catalog.resources
+    .filter((resource) => resource.published === true)
+    .forEach((resource) => {
+      [resource.filePath, resource.cover, resource.viewPath]
+        .filter((path) => path && isAllowedFilePath(path))
+        .forEach((path) => referenced.add(path));
+    });
+  return Object.keys(files).filter((path) => isAllowedFilePath(path) && referenced.has(path));
+}
+
+function validatePackageManifest(zipFiles) {
+  const manifestBytes = zipFiles.get("resource-package-manifest.json");
+  if (!manifestBytes) return { listedFiles: null, legacy: true };
+
+  let manifest;
+  try {
+    manifest = JSON.parse(decodeText(manifestBytes));
+  } catch {
+    throw new Error("The ZIP package manifest is not valid JSON. Export it again from Resource Studio.");
+  }
+  if (manifest?.format !== "ts-nextstep-resource-package" || manifest?.version !== 1 || !Array.isArray(manifest.files)) {
+    throw new Error("This ZIP package uses an unsupported Resource Studio format. Export a fresh recovery ZIP.");
+  }
+
+  const listedFiles = new Set();
+  for (const entry of manifest.files) {
+    if (typeof entry !== "string" || !entry.startsWith("public/") || !isAllowedFilePath(entry.slice("public/"))) {
+      throw new Error("The ZIP manifest contains an unsafe or unsupported public file path.");
+    }
+    if (listedFiles.has(entry) || !zipFiles.has(entry)) {
+      throw new Error(`The ZIP manifest is missing its listed file: ${entry}`);
+    }
+    listedFiles.add(entry);
+  }
+
+  for (const name of zipFiles.keys()) {
+    if (name.startsWith("public/") && isAllowedFilePath(name.slice("public/")) && !listedFiles.has(name)) {
+      throw new Error(`The ZIP contains an unlisted managed resource file: ${name}`);
+    }
+  }
+  return { listedFiles, legacy: false };
+}
+
 function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -154,6 +252,15 @@ function useObjectUrl(file) {
 
 function PreviewPanel({ resource, file }) {
   const objectUrl = useObjectUrl(file);
+  const [fileText, setFileText] = useState("");
+  useEffect(() => {
+    let active = true;
+    setFileText("");
+    if (file && ["prompt", "note"].includes(resource?.kind)) {
+      void file.text().then((text) => { if (active) setFileText(text); });
+    }
+    return () => { active = false; };
+  }, [file, resource?.kind]);
   const sourcePath = resource?.kind === "image" ? resource.filePath : resource?.filePath || resource?.cover;
   const sourceUrl = objectUrl || publicAssetUrl(sourcePath);
   const isText = resource?.kind === "prompt" || resource?.kind === "note";
@@ -171,7 +278,7 @@ function PreviewPanel({ resource, file }) {
       <div className="studio-preview-stage">
         {resource.kind === "pdf" && sourceUrl ? <iframe title={`${resource.title} PDF preview`} src={sourceUrl} /> : null}
         {resource.kind === "image" && sourceUrl ? <img src={sourceUrl} alt={`${resource.title} preview`} /> : null}
-        {isText ? <pre>{resource.promptText || "No text has been added yet."}</pre> : null}
+        {isText ? <pre>{resource.promptText || fileText || "No text has been added yet."}</pre> : null}
         {resource.kind === "episode" ? (
           <div className="studio-external-preview">
             <span className="studio-preview-number">{resource.number || "TS"}</span>
@@ -206,7 +313,7 @@ function ResourceRow({ resource, index, isFirst, isLast, selected, onSelect, onP
         <Icon name="grip" />
       </button>
       <div className="studio-row-number">{String(resource.displayOrder || index + 1).padStart(2, "0")}</div>
-      <div className="studio-row-main" onClick={() => onSelect(resource.id)}>
+      <div className="studio-row-main" role="button" tabIndex="0" aria-pressed={selected} aria-label={`Select ${resource.title || "resource"}`} onClick={() => onSelect(resource.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(resource.id); } }}>
         <div className="studio-row-heading">
           <h3>{resource.title || "Untitled resource"}</h3>
           <div className="studio-row-badges">
@@ -230,7 +337,7 @@ function ResourceRow({ resource, index, isFirst, isLast, selected, onSelect, onP
   );
 }
 
-function EditorPanel({ draft, categories, fileName, files, resources, editorIsDirty, onChange, onFileNameChange, onSave, onCancel, onChangeCover }) {
+function EditorPanel({ draft, categories, fileName, files, resources, editorIsDirty, onChange, onFileNameChange, onSave, onCancel, onChangeCover, onReplaceFile }) {
   if (!draft) {
     return <div className="studio-editor-empty"><Icon name="edit" /><h3>Edit details</h3><p>Select a resource from the list, or add a prompt to begin.</p></div>;
   }
@@ -254,7 +361,7 @@ function EditorPanel({ draft, categories, fileName, files, resources, editorIsDi
         </label>
         <label className="studio-field studio-field-wide">
           <span>Description</span>
-          <textarea rows="4" value={draft.description} onChange={(event) => onChange("description", event.target.value)} placeholder="What will someone learn or use?" />
+          <textarea aria-label="Description" rows="4" value={draft.description} onChange={(event) => onChange("description", event.target.value)} placeholder="What will someone learn or use?" />
         </label>
         <label className="studio-field">
           <span>Resource type</span>
@@ -293,6 +400,11 @@ function EditorPanel({ draft, categories, fileName, files, resources, editorIsDi
             <small>{canEditFile ? "Changing this creates a new safe filename and updates catalog references." : "This is an existing repository file. Re-upload it to rename it from the Studio."}</small>
           </label>
         ) : null}
+        {draft.kind !== "episode" ? <label className="studio-field studio-field-wide">
+          <span>{hasActualFile ? "Replace attached file" : "Attach a file"}</span>
+          <input type="file" accept={FILE_RULES[draft.kind]?.extensions.join(",")} onChange={(event) => { onReplaceFile(event.target.files?.[0]); event.target.value = ""; }} />
+          <small>Optional. Your existing file is preserved unless you select a replacement and save.</small>
+        </label> : null}
         {draft.kind === "prompt" ? (
           <label className="studio-field studio-field-wide">
             <span>Prompt text</span>
@@ -306,7 +418,7 @@ function EditorPanel({ draft, categories, fileName, files, resources, editorIsDi
         <label className="studio-toggle"><input type="checkbox" checked={draft.featured} onChange={(event) => onChange("featured", event.target.checked)} /><span>Featured resource</span></label>
         <label className="studio-toggle"><input type="checkbox" checked={draft.published} onChange={(event) => onChange("published", event.target.checked)} /><span>Visible on public website</span></label>
       </div>
-      <p className="studio-visibility-note">Publishing is prepared locally. It does not deploy the website.</p>
+      <p className="studio-visibility-note">Saving validates and refreshes this local project only. It never commits, pushes or deploys.</p>
 
       <div className="studio-editor-actions">
         <button className="studio-button studio-button-primary" type="button" onClick={onSave}><Icon name="check" /> Save Changes</button>
@@ -324,9 +436,9 @@ function FirstUseGuide() {
         <li><b>Add Files</b> for PDFs, prompt files, notes or cover images. New files start as drafts.</li>
         <li><b>Edit Details</b> to set the public title, description, category, tags, cover and visibility.</li>
         <li><b>Arrange</b> resources with the grip or the keyboard Move Up / Move Down buttons.</li>
-        <li><b>Export for Website</b> to download a validated overlay package, or choose <b>Save to repository</b> on localhost.</li>
+        <li><b>Save Changes</b> to validate the canonical catalog and refresh the local portfolio. Use <b>Export ZIP</b> as recovery.</li>
       </ol>
-      <p className="studio-guide-note">Your draft is saved locally in this browser. A resource is not published until you review the exported files, run the build and deploy through GitHub Pages.</p>
+      <p className="studio-guide-note">Your browser draft is recoverable, but project saves are still local only. Review the preview, run the production build deliberately, and deploy through GitHub Pages only after explicit approval.</p>
     </details>
   );
 }
@@ -346,31 +458,115 @@ export default function ResourceStudio() {
   const [draggedId, setDraggedId] = useState(null);
   const [notice, setNotice] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState("checking");
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const [replacementFile, setReplacementFile] = useState(null);
   const fileInputRef = useRef(null);
   const importInputRef = useRef(null);
+  const bridgeTokenRef = useRef(null);
+  const bridgeQueueRef = useRef(Promise.resolve());
+  const saveSequenceRef = useRef(0);
 
   const categories = catalog.categories?.length ? catalog.categories : DEFAULT_CATEGORIES;
   const selected = catalog.resources.find((resource) => resource.id === selectedId) || null;
   const previewResource = catalog.resources.find((resource) => resource.id === previewId) || selected;
   const previewFile = previewResource?.filePath ? files[previewResource.filePath] : null;
-  const editorIsDirty = Boolean(draft && selected && JSON.stringify({ ...draft, category: undefined, fileName }) !== JSON.stringify({ ...selected, category: undefined, fileName: fileNameFromPath(selected.filePath) }));
+  const editorIsDirty = Boolean(replacementFile || (draft && selected && JSON.stringify({ ...draft, category: undefined, fileName }) !== JSON.stringify({ ...selected, category: undefined, fileName: fileNameFromPath(selected.filePath) })));
+
+  useEffect(() => {
+    if (!editorIsDirty && saveStatus !== "saving") return undefined;
+    const warnBeforeLeave = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [editorIsDirty, saveStatus]);
+
+  const showNotice = useCallback((type, text) => {
+    setNotice({ type, text });
+    window.clearTimeout(showNotice.timer);
+    if (type === "success") showNotice.timer = window.setTimeout(() => setNotice(null), 7000);
+  }, []);
+
+  const bridgeRequest = useCallback(async (endpoint, options = {}) => {
+    let token = bridgeTokenRef.current;
+    if (!token) {
+      const session = await fetch(`${BRIDGE_URL}/api/session`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000) });
+      if (!session.ok) throw new Error("The local bridge rejected the Studio origin.");
+      token = (await session.json()).token;
+      bridgeTokenRef.current = token;
+    }
+    const request = (currentToken) => fetch(`${BRIDGE_URL}${endpoint}`, {
+      ...options,
+      signal: AbortSignal.timeout(60000),
+      headers: { Accept: "application/json", ...(options.body ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${currentToken}`, ...(options.headers || {}) },
+    });
+    let response = await request(token);
+    if (response.status === 401) {
+      bridgeTokenRef.current = null;
+      const session = await fetch(`${BRIDGE_URL}/api/session`, { signal: AbortSignal.timeout(5000) });
+      if (!session.ok) throw new Error("The local bridge rejected the Studio origin. Open http://127.0.0.1:4174.");
+      bridgeTokenRef.current = (await session.json()).token;
+      response = await request(bridgeTokenRef.current);
+    }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 401) bridgeTokenRef.current = null;
+      throw new Error(payload.error || `Bridge request failed (${response.status}).`);
+    }
+    setBridgeStatus("connected");
+    return payload;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     loadDraft(INITIAL_CATALOG)
-      .then((saved) => {
+      .then(async (saved) => {
         if (cancelled) return;
-        const nextCatalog = normalizeCatalog(saved.catalog);
-        setCatalog(nextCatalog);
-        setFiles(saved.files || {});
-        setStorageName(saved.storage);
-        setReady(true);
-        const first = nextCatalog.resources[0];
-        if (first) {
-          setSelectedId(first.id);
-          setPreviewId(first.id);
-          setDraft({ ...first });
-          setFileName(fileNameFromPath(first.filePath));
+        const browserCatalog = normalizeCatalog(saved.catalog);
+        const browserFiles = saved.files || {};
+        const hasUnsyncedBrowserChanges = saved.synced !== true && (
+          JSON.stringify(browserCatalog) !== JSON.stringify(INITIAL_CATALOG) || Object.keys(browserFiles).length > 0
+        );
+
+        try {
+          const state = await bridgeRequest("/api/state");
+          if (cancelled) return;
+
+          // A successfully bridged draft is project state, not a stale browser
+          // cache. Unsynced browser work is deliberately kept visible so a
+          // failed bridge save can be recovered instead of silently discarded.
+          const nextCatalog = hasUnsyncedBrowserChanges ? browserCatalog : normalizeCatalog(state.catalog);
+          const bridgedFiles = decodeBridgeFiles(state.files);
+          const nextFiles = hasUnsyncedBrowserChanges ? { ...bridgedFiles, ...browserFiles } : bridgedFiles;
+          setCatalog(nextCatalog);
+          setFiles(nextFiles);
+          setStorageName(hasUnsyncedBrowserChanges ? `${saved.storage} recovery` : "local project bridge");
+          setReady(true);
+          const first = nextCatalog.resources[0] || null;
+          setSelectedId(first?.id || null);
+          setPreviewId(first?.id || null);
+          setDraft(first ? { ...first, tags: [...(first.tags || [])] } : null);
+          setFileName(fileNameFromPath(first?.filePath));
+          if (!hasUnsyncedBrowserChanges) await saveDraft(nextCatalog, nextFiles, { synced: true });
+          if (hasUnsyncedBrowserChanges) {
+            setSaveStatus("unsynced");
+            showNotice("warning", "An unsynced browser recovery draft is open. Review it, then use Save to local project when the bridge is ready.");
+          }
+        } catch (error) {
+          if (cancelled) return;
+          setCatalog(browserCatalog);
+          setFiles(browserFiles);
+          setStorageName(saved.storage);
+          setReady(true);
+          setBridgeStatus("unavailable");
+          const first = browserCatalog.resources[0] || null;
+          setSelectedId(first?.id || null);
+          setPreviewId(first?.id || null);
+          setDraft(first ? { ...first, tags: [...(first.tags || [])] } : null);
+          setFileName(fileNameFromPath(first?.filePath));
+          showNotice("warning", `${error.message || "The local bridge is unavailable."} ${hasUnsyncedBrowserChanges ? "Showing your browser recovery draft." : "Project resources could not be loaded."} Use the TS nextstep — Start All desktop shortcut, then reload or save again.`);
         }
       })
       .catch((error) => {
@@ -379,23 +575,38 @@ export default function ResourceStudio() {
         setNotice({ type: "error", text: error.message || "Could not load the local draft. The Studio is using the starter catalog." });
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [bridgeRequest, showNotice]);
 
-  useEffect(() => {
-    if (!editorIsDirty) return undefined;
-    const warnBeforeLeave = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warnBeforeLeave);
-    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
-  }, [editorIsDirty]);
-
-  const showNotice = useCallback((type, text) => {
-    setNotice({ type, text });
-    window.clearTimeout(showNotice.timer);
-    showNotice.timer = window.setTimeout(() => setNotice(null), 7000);
-  }, []);
+  const syncBridge = useCallback((nextCatalog, nextFiles, operation = "save", deleteResourceId = null) => {
+    const sequence = ++saveSequenceRef.current;
+    setSaveStatus("saving");
+    const run = bridgeQueueRef.current.then(async () => {
+    try {
+      const filesForBridge = await encodeBridgeFiles(nextFiles);
+      const payload = await bridgeRequest("/api/commit", {
+        method: "POST",
+        body: JSON.stringify({ catalog: nextCatalog, files: filesForBridge, operation, deleteResourceId }),
+      });
+      // Mark the browser copy clean only after the bridge has confirmed the
+      // canonical catalog, manifests and managed files were written.
+      if (sequence === saveSequenceRef.current) {
+        await saveDraft(nextCatalog, nextFiles, { synced: true });
+        setStorageName("local project bridge");
+        setSaveStatus("saved");
+        const warning = payload.warnings?.length ? ` ${payload.warnings.slice(0, 2).join(" ")}` : "";
+        showNotice("success", `Saved to the local project. ${payload.publicResourceCount} published resources; public files and both manifests updated. The local portfolio refreshes automatically. GitHub Pages is unchanged.${warning}`);
+      }
+      return payload;
+    } catch (error) {
+      setBridgeStatus("unavailable");
+      setSaveStatus("unsynced");
+      showNotice("error", `${error.message || "The local bridge is unavailable."} This change is NOT saved to the project. Your browser recovery draft is kept. Use TS nextstep — Start All, then Save to local project to retry.`);
+      return null;
+    }
+    });
+    bridgeQueueRef.current = run.catch(() => undefined);
+    return run;
+  }, [bridgeRequest, showNotice]);
 
   const persist = useCallback(async (nextCatalog, nextFiles = files) => {
     setCatalog(nextCatalog);
@@ -408,23 +619,26 @@ export default function ResourceStudio() {
     }
   }, [files, showNotice]);
 
-  const commitCatalog = useCallback((nextCatalog, message = "Draft saved locally.", nextFiles = files) => {
-    setHistory((previous) => [...previous.slice(-19), catalog]);
+  const commitCatalog = useCallback((nextCatalog, message = "Draft saved locally.", nextFiles = files, operation = "save", deleteResourceId = null) => {
+    setHistory((previous) => [...previous.slice(-19), { catalog, files: { ...files } }]);
     const normalized = normalizeCatalog(nextCatalog);
     void persist(normalized, nextFiles);
-    showNotice("success", message);
-  }, [catalog, files, persist, showNotice]);
+    void syncBridge(normalized, nextFiles, operation, deleteResourceId);
+  }, [catalog, files, persist, syncBridge]);
 
   const selectResource = useCallback((id) => {
+    if (id !== selectedId && editorIsDirty && !window.confirm("Discard unsaved editor changes? Saved project resources are not affected.")) return;
     const resource = catalog.resources.find((item) => item.id === id);
     if (!resource) return;
     setSelectedId(id);
     setPreviewId(id);
     setDraft({ ...resource, tags: [...(resource.tags || [])] });
     setFileName(fileNameFromPath(resource.filePath));
-  }, [catalog.resources]);
+    setReplacementFile(null);
+  }, [catalog.resources, editorIsDirty, selectedId]);
 
   const resetEditor = useCallback(() => {
+    setReplacementFile(null);
     if (selected) {
       setDraft({ ...selected, tags: [...(selected.tags || [])] });
       setFileName(fileNameFromPath(selected.filePath));
@@ -479,7 +693,9 @@ export default function ResourceStudio() {
     }
 
     if (lastId) {
+      setHistory((previous) => [...previous.slice(-19), { catalog, files: { ...files } }]);
       await persist(nextCatalog, nextFiles);
+      void syncBridge(nextCatalog, nextFiles);
       setSelectedId(lastId);
       setPreviewId(lastId);
       const added = nextCatalog.resources.find((resource) => resource.id === lastId);
@@ -489,7 +705,7 @@ export default function ResourceStudio() {
     } else if (errors.length) {
       showNotice("error", errors.join(" "));
     }
-  }, [catalog, files, persist, showNotice]);
+  }, [catalog, files, persist, showNotice, syncBridge]);
 
   const onFileInput = (event) => {
     void handleFiles(event.target.files);
@@ -525,15 +741,19 @@ export default function ResourceStudio() {
 
     let nextFiles = { ...files };
     let nextPath = draft.filePath;
-    const currentFile = draft.filePath ? files[draft.filePath] : null;
+    let currentFile = replacementFile || (draft.filePath ? files[draft.filePath] : null);
     const kindChanged = draft.kind !== oldResource.kind && draft.kind !== "episode";
-    if (currentFile && (fileName || kindChanged)) {
+    if (currentFile && (fileName || kindChanged || replacementFile)) {
       const candidateName = sanitizeFileName(fileName || currentFile.name, currentFile.name);
       nextPath = uniqueResourcePath(draft.kind, candidateName, catalog.resources, files, oldResource.filePath);
+      nextFiles[nextPath] = currentFile;
       if (oldResource.filePath && nextPath !== oldResource.filePath) {
-        nextFiles[nextPath] = currentFile;
         delete nextFiles[oldResource.filePath];
       }
+    }
+    if (draft.kind === "prompt" && nextPath && currentFile && draft.promptText !== oldResource.promptText) {
+      currentFile = new File([draft.promptText || ""], fileNameFromPath(nextPath), { type: mimeForPath(nextPath) });
+      nextFiles[nextPath] = currentFile;
     }
 
     const nextResource = {
@@ -541,7 +761,7 @@ export default function ResourceStudio() {
       type: draft.kind === "episode" ? "external" : draft.kind,
       category: undefined,
       filePath: nextPath,
-      originalFileName: draft.originalFileName || (currentFile ? currentFile.name : null),
+      originalFileName: replacementFile?.name || draft.originalFileName || (currentFile ? currentFile.name : null),
       fileSize: currentFile?.size ?? draft.fileSize ?? null,
       mimeType: currentFile?.type || draft.mimeType || (nextPath ? mimeForPath(nextPath) : null),
       tags: Array.from(new Set((draft.tags || []).map((tag) => String(tag).trim()).filter(Boolean))).slice(0, 16),
@@ -556,7 +776,7 @@ export default function ResourceStudio() {
       }));
     }
     const nextCatalog = normalizeCatalog({ ...catalog, resources: nextResources });
-    const validation = validateCatalog(nextCatalog);
+    const validation = validateCatalog(nextCatalog, { fileExists: (path) => projectAssetExists(path, nextFiles) });
     if (!validation.valid) {
       showNotice("error", validation.errors.slice(0, 3).join(" "));
       return;
@@ -564,7 +784,8 @@ export default function ResourceStudio() {
     commitCatalog(nextCatalog, "Changes saved to the local draft.", nextFiles);
     setDraft({ ...nextResource, category: getCategoryLabel(nextResource.categoryId, categories) });
     setFileName(fileNameFromPath(nextPath));
-  }, [catalog, categories, commitCatalog, draft, fileName, files, showNotice]);
+    setReplacementFile(null);
+  }, [catalog, categories, commitCatalog, draft, fileName, files, replacementFile, showNotice]);
 
   const move = useCallback((id, direction) => {
     const nextResources = moveResource(catalog.resources, id, direction);
@@ -581,46 +802,52 @@ export default function ResourceStudio() {
   const deleteResource = useCallback((id) => {
     const resource = catalog.resources.find((item) => item.id === id);
     if (!resource) return;
-    const confirmed = window.confirm(`Delete “${resource.title}” from the Studio catalog? Existing repository files will not be deleted automatically.`);
+    const confirmed = window.confirm(`Delete “${resource.title}” from the Studio catalog? The local bridge keeps a backup and moves unshared files to recoverable trash. Undo is available during this session.`);
     if (!confirmed) return;
     const nextFiles = { ...files };
     if (resource.filePath && nextFiles[resource.filePath]) delete nextFiles[resource.filePath];
     const nextResources = catalog.resources
       .filter((item) => item.id !== id)
       .map((item) => ({ ...item, cover: item.cover === resource.filePath ? null : item.cover }));
-    const nextCatalog = normalizeCatalog({ ...catalog, resources: nextResources });
-    void persist(nextCatalog, nextFiles);
-    setHistory((previous) => [...previous.slice(-19), catalog]);
+    const nextCatalog = normalizeCatalog({ ...catalog, resources: withDisplayOrder(nextResources) });
+    commitCatalog(nextCatalog, "Resource removed from the local catalog.", nextFiles, "delete", id);
     const nextSelected = nextCatalog.resources[0] || null;
     setSelectedId(nextSelected?.id || null);
     setPreviewId(nextSelected?.id || null);
     setDraft(nextSelected ? { ...nextSelected, tags: [...(nextSelected.tags || [])] } : null);
     setFileName(fileNameFromPath(nextSelected?.filePath));
-    showNotice("success", "Resource removed from the local catalog. Any existing repository file was left untouched.");
-  }, [catalog, files, persist, showNotice]);
+    setReplacementFile(null);
+  }, [catalog, commitCatalog, files, showNotice]);
 
   const undo = useCallback(() => {
     const previous = history[history.length - 1];
     if (!previous) return;
     setHistory((items) => items.slice(0, -1));
-    void persist(previous, files);
-    const resource = previous.resources.find((item) => item.id === selectedId) || previous.resources[0] || null;
+    void persist(previous.catalog, previous.files);
+    void syncBridge(previous.catalog, previous.files, "restore");
+    const resource = previous.catalog.resources.find((item) => item.id === selectedId) || previous.catalog.resources[0] || null;
     setSelectedId(resource?.id || null);
     setPreviewId(resource?.id || null);
     setDraft(resource ? { ...resource, tags: [...(resource.tags || [])] } : null);
     setFileName(fileNameFromPath(resource?.filePath));
     showNotice("success", "Undid the last catalog change.");
-  }, [files, history, persist, selectedId, showNotice]);
+  }, [history, persist, selectedId, showNotice, syncBridge]);
 
   const changeDraft = (field, value) => setDraft((current) => current ? { ...current, [field]: value } : current);
 
   const changeCover = (value) => setDraft((current) => current ? { ...current, cover: value } : current);
 
-  const getKnownFileExists = useCallback((path, extraFiles = files) => {
-    if (!path) return true;
-    if (extraFiles[path]) return true;
-    return INITIAL_CATALOG.resources.some((resource) => resource.filePath === path || resource.cover === path);
-  }, [files]);
+  const replaceFile = async (file) => {
+    if (!file || !draft) return;
+    const check = validateUploadFile(file, draft.kind);
+    if (!check.valid) { showNotice("error", check.errors.join(" ")); return; }
+    setReplacementFile(file);
+    if (!draft.filePath) setFileName(file.name);
+    if (draft.kind === "prompt") changeDraft("promptText", await file.text());
+    showNotice("warning", "Replacement staged. Save Changes to replace the file; Cancel keeps the current file.");
+  };
+
+  const getKnownFileExists = useCallback((path, extraFiles = files) => projectAssetExists(path, extraFiles), [files]);
 
   const validateForExport = useCallback(() => {
     const result = validateCatalog(catalog, { fileExists: (path) => getKnownFileExists(path) });
@@ -643,7 +870,8 @@ export default function ResourceStudio() {
     const result = validateForExport();
     if (!result) return;
     const publicCatalog = toPublicCatalog(result.catalog);
-    const includedFiles = Object.keys(files).filter((path) => isAllowedFilePath(path));
+    const includedFiles = publishedStagedPaths(result.catalog, files);
+    const omittedDraftFiles = Object.keys(files).filter((path) => isAllowedFilePath(path) && !includedFiles.includes(path));
     const manifest = {
       format: "ts-nextstep-resource-package",
       version: 1,
@@ -651,7 +879,8 @@ export default function ResourceStudio() {
       sourceCatalog: "src/data/resourceCatalog.json",
       publicManifest: "public/assets/resources/resources.json",
       files: includedFiles.map((path) => `public/${path}`),
-      note: "Overlay this package onto the repository after reviewing it. It does not deploy or delete existing files.",
+      omittedDraftFiles,
+      note: "Overlay this package onto the repository after reviewing it. Only files referenced by published records are included. Draft files remain local and are never copied into public/.",
     };
     const entries = [
       { name: "src/data/resourceCatalog.json", data: `${JSON.stringify(result.catalog, null, 2)}\n` },
@@ -664,7 +893,7 @@ export default function ResourceStudio() {
     try {
       const zip = await createZip(entries);
       downloadBlob(zip, `tsnextstep-resource-package-${new Date().toISOString().slice(0, 10)}.zip`);
-      showNotice("success", `Exported a validated package with ${includedFiles.length} staged file${includedFiles.length === 1 ? "" : "s"}.`);
+      showNotice("success", `Exported ${includedFiles.length} published file${includedFiles.length === 1 ? "" : "s"}. ${omittedDraftFiles.length ? `${omittedDraftFiles.length} draft file${omittedDraftFiles.length === 1 ? " was" : "s were"} kept local.` : ""}`);
     } catch (error) {
       showNotice("error", error.message || "Could not create the resource package.");
     }
@@ -675,8 +904,11 @@ export default function ResourceStudio() {
     try {
       let importedCatalog;
       let importedFiles = {};
+      let legacyPackage = false;
       if (extensionOf(file.name) === ".zip") {
         const zipFiles = await readZip(file);
+        const packageInfo = validatePackageManifest(zipFiles);
+        legacyPackage = packageInfo.legacy;
         const catalogBytes = zipFiles.get("src/data/resourceCatalog.json") || zipFiles.get("resource-catalog.json") || zipFiles.get("public/assets/resources/resources.json");
         if (!catalogBytes) throw new Error("The ZIP did not contain a resource catalog.");
         importedCatalog = JSON.parse(decodeText(catalogBytes));
@@ -684,6 +916,7 @@ export default function ResourceStudio() {
           if (!name.startsWith("public/")) continue;
           const path = name.slice("public/".length);
           if (!isAllowedFilePath(path)) continue;
+          if (packageInfo.listedFiles && !packageInfo.listedFiles.has(name)) continue;
           importedFiles[path] = new File([bytes], fileNameFromPath(path), { type: mimeForPath(path) });
         }
       } else {
@@ -691,7 +924,7 @@ export default function ResourceStudio() {
       }
 
       const normalized = normalizeCatalog(importedCatalog);
-      const validation = validateCatalog(normalized, { fileExists: (path) => Boolean(importedFiles[path]) || getKnownFileExists(path, importedFiles) });
+      const validation = validateCatalog(normalized, { fileExists: (path) => getKnownFileExists(path, importedFiles) });
       if (!validation.valid) throw new Error(validation.errors.slice(0, 5).join(" "));
       const confirmed = window.confirm("Import this package and replace the current local draft? A catalog backup will download first. Existing repository files will not be deleted.");
       if (!confirmed) return;
@@ -703,7 +936,7 @@ export default function ResourceStudio() {
       setPreviewId(first?.id || null);
       setDraft(first ? { ...first, tags: [...(first.tags || [])] } : null);
       setFileName(fileNameFromPath(first?.filePath));
-      showNotice("success", `Imported ${normalized.resources.length} catalog records. Review them before exporting or saving to the repository.`);
+      showNotice("success", `Imported ${normalized.resources.length} catalog records. ${legacyPackage ? "This is a legacy ZIP without a package manifest; export a fresh recovery ZIP after review. " : ""}Review them before saving to the local project.`);
     } catch (error) {
       showNotice("error", error.message || "The package could not be imported.");
     } finally {
@@ -729,7 +962,7 @@ export default function ResourceStudio() {
 
   const saveToRepository = useCallback(async () => {
     if (!window.showDirectoryPicker) {
-      showNotice("warning", "This browser cannot write to a local folder. Use Export for Website instead.");
+      showNotice("warning", "This browser cannot write to a local folder. Use Export ZIP instead.");
       return;
     }
     const result = validateForExport();
@@ -737,8 +970,12 @@ export default function ResourceStudio() {
     try {
       const root = await window.showDirectoryPicker({ mode: "readwrite", id: "tsnextstep-resource-studio" });
       await root.getFileHandle("package.json");
+      const sourceDirectory = await root.getDirectoryHandle("src");
+      await sourceDirectory.getFileHandle("App.jsx");
+      const publicDirectory = await root.getDirectoryHandle("public");
+      await publicDirectory.getDirectoryHandle("assets");
       const publicCatalog = toPublicCatalog(result.catalog);
-      const targetPaths = Object.keys(files).filter((path) => isAllowedFilePath(path));
+      const targetPaths = publishedStagedPaths(result.catalog, files);
       const replace = targetPaths.length ? window.confirm(`Save the catalog and ${targetPaths.length} staged file${targetPaths.length === 1 ? "" : "s"} to this repository? Existing target files will be replaced only after this confirmation.`) : true;
       if (!replace) return;
       let previousCatalog = null;
@@ -759,6 +996,10 @@ export default function ResourceStudio() {
     }
   }, [files, showNotice, validateForExport]);
 
+  const saveToLocalProject = useCallback(() => {
+    void syncBridge(catalog, files);
+  }, [catalog, files, syncBridge]);
+
   const previewIndex = previewResource ? catalog.resources.findIndex((resource) => resource.id === previewResource.id) : -1;
 
   return (
@@ -770,10 +1011,11 @@ export default function ResourceStudio() {
         </div>
         <div className="studio-header-actions">
           <span className={`studio-storage-status is-${storageName === "loading" ? "loading" : "ready"}`}><span className="studio-status-dot" />{ready ? `Draft saved in ${storageName}` : "Loading local draft…"}</span>
+          <span className={`studio-bridge-status is-${bridgeStatus}`}><span className="studio-status-dot" />{bridgeStatus === "connected" ? "Project bridge connected" : bridgeStatus === "checking" ? "Checking project bridge…" : "Browser draft mode"}</span>
           <button className="studio-button studio-button-secondary" type="button" onClick={undo} disabled={!history.length}><Icon name="undo" /> Undo</button>
           <button className="studio-button studio-button-secondary" type="button" onClick={() => importInputRef.current?.click()}><Icon name="upload" /> Import Package</button>
           <button className="studio-button studio-button-secondary" type="button" onClick={exportCatalog}><Icon name="download" /> Export Catalog</button>
-          <button className="studio-button studio-button-primary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export for Website</button>
+          <button className="studio-button studio-button-primary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export ZIP</button>
         </div>
       </header>
 
@@ -805,7 +1047,7 @@ export default function ResourceStudio() {
               <div><dt>Drafts</dt><dd>{catalog.resources.filter((resource) => !resource.published).length}</dd></div>
               <div><dt>Staged files</dt><dd>{Object.keys(files).length}</dd></div>
             </dl>
-            <p>Local draft changes are recoverable in this browser. Use Export for Website before committing anything.</p>
+            <p>Local draft changes are recoverable in this browser. Use Export ZIP as a portable recovery option.</p>
           </div>
         </section>
 
@@ -817,8 +1059,8 @@ export default function ResourceStudio() {
             </div>
             <div className="studio-library-controls">
               <label className="studio-search"><Icon name="search" /><span className="studio-visually-hidden">Search resources</span><input type="search" placeholder="Search title, filename or tag" value={query} onChange={(event) => setQuery(event.target.value)} />{query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><Icon name="close" /></button> : null}</label>
-              <div className="studio-filter-tabs" role="tablist" aria-label="Resource type filters">
-                {STUDIO_FILTERS.map((option) => <button key={option.id} type="button" role="tab" aria-selected={filter === option.id} className={filter === option.id ? "is-active" : ""} onClick={() => setFilter(option.id)}>{option.label}</button>)}
+              <div className="studio-filter-tabs" role="toolbar" aria-label="Resource type filters">
+                {STUDIO_FILTERS.map((option) => <button key={option.id} type="button" aria-pressed={filter === option.id} className={filter === option.id ? "is-active" : ""} onClick={() => setFilter(option.id)}>{option.label}</button>)}
               </div>
             </div>
             <p className="studio-reorder-hint"><Icon name="grip" /> Drag the grip to reorder. Every row also has keyboard-friendly Move Up and Move Down buttons.</p>
@@ -829,18 +1071,18 @@ export default function ResourceStudio() {
 
           <aside className="studio-side-column">
             <PreviewPanel resource={previewResource} file={previewFile} />
-            <EditorPanel draft={draft} categories={categories} fileName={fileName} files={files} resources={catalog.resources} editorIsDirty={editorIsDirty} onChange={changeDraft} onFileNameChange={setFileName} onSave={saveEditor} onCancel={resetEditor} onChangeCover={changeCover} />
+            <EditorPanel draft={draft} categories={categories} fileName={fileName} files={files} resources={catalog.resources} editorIsDirty={editorIsDirty} onChange={changeDraft} onFileNameChange={setFileName} onSave={saveEditor} onCancel={resetEditor} onChangeCover={changeCover} onReplaceFile={replaceFile} />
           </aside>
         </section>
 
         <section className="studio-publish-panel">
-          <div><span className="studio-kicker">Prepare for GitHub Pages</span><h2>Ready when you are.</h2><p>The Studio validates IDs, categories, paths, file references and publication state before export. It never pushes, commits or claims that your site is live.</p></div>
-          <div className="studio-publish-actions"><button className="studio-button studio-button-secondary" type="button" onClick={() => void saveToRepository()} disabled={!window.showDirectoryPicker}><Icon name="folder" /> Save to repository</button><button className="studio-button studio-button-primary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export for Website</button></div>
-          <p className="studio-publish-note">{window.showDirectoryPicker ? "Local folder writing is available on localhost in supported browsers." : "This browser cannot write to folders directly; use the validated ZIP export."}</p>
+          <div><span className="studio-kicker">Local project bridge</span><h2>Save deliberately.</h2><p>The local bridge validates the canonical catalog, keeps drafts outside public/, regenerates both manifests and refreshes Vite. It never pushes, commits or claims that your site is live.</p></div>
+          <div className="studio-publish-actions"><button className="studio-button studio-button-primary" type="button" onClick={saveToLocalProject}><Icon name="check" /> Save to local project</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void saveToRepository()} disabled={!window.showDirectoryPicker}><Icon name="folder" /> Folder recovery</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export ZIP</button></div>
+          <p className="studio-publish-note">{bridgeStatus === "connected" ? "Published changes are local and Vite watches the project; deploy only with an explicit build and GitHub Pages action." : "Start npm run local to connect the bridge. Browser drafts and ZIP export remain available without it."}</p>
         </section>
       </main>
 
-      <footer className="studio-footer"><span>TS nextstep Resource Studio</span><span>Local draft · not published · {previewIndex >= 0 ? `Preview ${previewIndex + 1} of ${catalog.resources.length}` : "No preview selected"}</span></footer>
+      <footer className="studio-footer"><span>TS nextstep Resource Studio</span><span role="status">{saveStatus === "saving" ? "Saving to project…" : saveStatus === "unsynced" ? "Not saved to project — retry required" : saveStatus === "saved" ? "Project saved · GitHub Pages unchanged" : "Local workspace · GitHub Pages unchanged"} · {previewIndex >= 0 ? `Preview ${previewIndex + 1} of ${catalog.resources.length}` : "No preview selected"}</span></footer>
     </div>
   );
 }

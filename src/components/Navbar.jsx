@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NAV_LINKS, SITE } from "../data/site";
 import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { useSectionSpy } from "../hooks/useReveal";
+import { scrollToId } from "../lib/scroll";
+import { usePointerLight } from "../lib/usePointerLight";
 import { MenuIcon, CloseIcon, ArrowUpRight } from "./icons";
 
 const IDS = NAV_LINKS.map((l) => l.id);
@@ -12,6 +14,9 @@ export default function Navbar() {
   const active = useSectionSpy(IDS);
   const toggleRef = useRef(null);
   const menuRef = useRef(null);
+  const navRef = useRef(null);
+
+  usePointerLight(navRef, { viewport: true });
 
   useBodyScrollLock(open);
 
@@ -61,17 +66,14 @@ export default function Navbar() {
   const close = useCallback(() => setOpen(false), []);
 
   const onNavClick = (e, id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
     e.preventDefault();
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    history.replaceState(null, "", `#${id}`);
+    scrollToId(id);
     setOpen(false);
   };
 
   return (
     <>
-      <header className={`nav${scrolled || open ? " is-scrolled" : ""}`}>
+      <header className={`nav liquid${scrolled || open ? " is-scrolled" : ""}`} ref={navRef}>
         <div className="nav-inner">
           <a
             className="brand"
@@ -93,7 +95,7 @@ export default function Navbar() {
                 key={link.id}
                 href={`#${link.id}`}
                 className={`nav-link${active === link.id ? " is-active" : ""}`}
-                aria-current={active === link.id ? "page" : undefined}
+                aria-current={active === link.id ? "location" : undefined}
                 onClick={(e) => onNavClick(e, link.id)}
               >
                 {link.label}

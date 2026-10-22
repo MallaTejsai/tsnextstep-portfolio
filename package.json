@@ -10,8 +10,16 @@
     "preview": "vite preview",
     "studio": "vite --config tools/resource-studio/vite.config.js --host 127.0.0.1 --port 4174",
     "studio:build": "vite build --config tools/resource-studio/vite.config.js",
+    "local": "node tools/local-dev.mjs",
+    "local:stop": "node tools/local-dev.mjs stop",
+    "bridge": "node tools/resource-studio/bridge.mjs --root . --port 4175",
     "validate:resources": "node scripts/validate-resources.mjs",
-    "test:resources": "node scripts/test-resources.mjs"
+    "test:resources": "node scripts/test-resources.mjs",
+    "test:bridge": "node scripts/test-resource-bridge.mjs",
+    "verify": "npm run test:resources && npm run test:bridge && npm run build && node scripts/verify-public-output.mjs",
+    "test:studio": "node scripts/test-studio-live.mjs",
+    "test:browser": "node scripts/test-browser.mjs",
+    "test:pointer": "node scripts/test-pointer-light.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -19,6 +27,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0",
+    "playwright": "^1.64.1",
     "vite": "^7.0.0",
     "vite-plugin-singlefile": "^2.3.3"
   }

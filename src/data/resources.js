@@ -29,14 +29,16 @@ export const RESOURCES = (publicCatalog.resources || []).map((resource) => ({
   category: resource.category || getCategoryLabel(resource.categoryId, ALL_CATEGORIES),
 }));
 
+const TOOLKIT_RESOURCES = RESOURCES.filter((resource) => resource.kind !== "episode");
+
 export const RESOURCE_CATEGORIES = [
   { id: "all", label: "All topics" },
-  ...ALL_CATEGORIES.filter((category) => RESOURCES.some((resource) => resource.categoryId === category.id)),
+  ...ALL_CATEGORIES.filter((category) => TOOLKIT_RESOURCES.some((resource) => resource.categoryId === category.id)),
 ];
 
 export const RESOURCE_TYPES = [
   { id: "all", label: "All resources" },
-  ...Array.from(new Map(RESOURCES.map((resource) => [resource.kind, resource])).values()).map((resource) => ({
+  ...Array.from(new Map(TOOLKIT_RESOURCES.map((resource) => [resource.kind, resource])).values()).map((resource) => ({
     id: resource.kind,
     label: TYPE_LABELS[resource.kind] || resource.kind,
   })),

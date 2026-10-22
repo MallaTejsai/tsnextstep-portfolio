@@ -3,29 +3,29 @@
    ============================================================ */
 
 :root {
-  --bg: #050507;
-  --bg-2: #08080c;
-  --bg-3: #0c0d13;
-  --panel: #0b0c11;
-  --panel-2: #12141b;
+  --bg: #08090b;
+  --bg-2: #0d0e12;
+  --bg-3: #15161b;
+  --panel: #111216;
+  --panel-2: #18191f;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
 
-  --text: #f2f4f9;
-  --text-2: #a6aab8;
-  --text-3: #7d8290;
+  --text: #f5f5f7;
+  --text-2: #a5a7b0;
+  --text-3: #747680;
 
-  /* electric blue → violet accent system */
-  --blue: #4d8dff;
-  --blue-2: #8fb4ff;
-  --violet: #9b6bff;
-  --violet-deep: #5b3fe0;
-  --cyan: #38d9f5;
-  --glow: rgba(77, 141, 255, 0.45);
+  /* Compatibility names retained for the existing component styles. */
+  --blue: #e11d35;
+  --blue-2: #ff7d8b;
+  --violet: #ff3048;
+  --violet-deep: #a90f24;
+  --cyan: #ff3048;
+  --glow: rgba(225, 29, 53, 0.42);
   /* filled surfaces carrying white text (WCAG AA) */
-  --accent-fill: #2f6df0;
-  --accent-fill-deep: #4c37d6;
-  --accent-soft: rgba(77, 141, 255, 0.12);
+  --accent-fill: #c91830;
+  --accent-fill-deep: #8e1223;
+  --accent-soft: rgba(225, 29, 53, 0.12);
 
   --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -36,7 +36,7 @@
   --container: 1280px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --shadow-glow: 0 0 0 1px rgba(77, 141, 255, 0.22), 0 12px 48px rgba(77, 141, 255, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(225, 29, 53, 0.25), 0 12px 48px rgba(225, 29, 53, 0.12);
 }
 
 /* large monitors: a little more room without letting text lines run long */
@@ -218,12 +218,12 @@ p {
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-fill) 0%, var(--accent-fill-deep) 100%);
   color: #fff;
-  box-shadow: 0 10px 30px rgba(77, 141, 255, 0.28);
+  box-shadow: 0 10px 30px rgba(225, 29, 53, 0.28);
 }
 
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 40px rgba(77, 141, 255, 0.42);
+  box-shadow: 0 16px 40px rgba(225, 29, 53, 0.42);
 }
 
 .btn-primary:active {
@@ -252,10 +252,8 @@ p {
 /* ---------- reveal on scroll ---------- */
 
 .reveal {
-  opacity: 0;
-  transform: translateY(26px);
-  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-  transition-delay: var(--reveal-delay, 0s);
+  opacity: 1;
+  transform: none;
 }
 
 .reveal.is-in {
@@ -317,7 +315,7 @@ p {
   min-height: 320px;
   top: -12vw;
   right: -8vw;
-  background: radial-gradient(circle, rgba(77, 141, 255, 0.3), transparent 65%);
+  background: radial-gradient(circle, rgba(225, 29, 53, 0.3), transparent 65%);
 }
 
 .backdrop-orb-2 {
@@ -327,7 +325,7 @@ p {
   min-height: 260px;
   bottom: 8vh;
   left: -12vw;
-  background: radial-gradient(circle, rgba(120, 70, 230, 0.34), transparent 65%);
+  background: radial-gradient(circle, rgba(137, 13, 32, 0.34), transparent 65%);
 }
 
 .backdrop-grain {
@@ -346,7 +344,7 @@ p {
   height: 460px;
   margin: -230px 0 0 -230px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(77, 141, 255, 0.16), transparent 62%);
+  background: radial-gradient(circle, rgba(225, 29, 53, 0.16), transparent 62%);
   pointer-events: none;
   z-index: 1;
   opacity: 0;
@@ -377,7 +375,7 @@ p {
 }
 
 .chip-live {
-  border-color: rgba(77, 141, 255, 0.5);
+  border-color: rgba(225, 29, 53, 0.5);
   color: var(--blue-2);
   background: var(--accent-soft);
 }
@@ -394,13 +392,13 @@ p {
 
 @keyframes pulse-dot {
   0% {
-    box-shadow: 0 0 0 0 rgba(77, 141, 255, 0.55);
+    box-shadow: 0 0 0 0 rgba(225, 29, 53, 0.55);
   }
   70% {
-    box-shadow: 0 0 0 9px rgba(77, 141, 255, 0);
+    box-shadow: 0 0 0 9px rgba(225, 29, 53, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(77, 141, 255, 0);
+    box-shadow: 0 0 0 0 rgba(225, 29, 53, 0);
   }
 }
 

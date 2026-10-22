@@ -43,6 +43,23 @@ const LOCAL_RESOURCE_PATH_RE = /^assets\/resources\/(pdfs|prompt-packs|covers|no
 const LEGACY_COVER_PATH_RE = /^images\/content\/[^/]+$/;
 const URL_PROTOCOL_RE = /^https?:\/\//i;
 const SECRET_LIKE_RE = /-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*[^\s]+|(?:ghp_|github_pat_|sk-[A-Za-z0-9])/i;
+const WINDOWS_DEVICE_RE = /^(?:con|prn|aux|nul|clock\$|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³]) *(?:\.|$)/i;
+
+// Use the same identity on case-sensitive hosts and Windows. Exact shared
+// references are allowed; alternate spellings of that reference are not.
+export function resourcePathKey(value) {
+  return value.normalize("NFC").toUpperCase().toLowerCase();
+}
+
+export function assertNoPathAliases(paths) {
+  const seen = new Map();
+  for (const value of paths) {
+    if (typeof value !== "string") continue;
+    const key = resourcePathKey(value);
+    if (seen.has(key) && seen.get(key) !== value) throw new Error("Case-insensitive resource path aliases are not permitted.");
+    seen.set(key, value);
+  }
+}
 
 export function slugify(value) {
   return String(value || "")
@@ -70,32 +87,50 @@ export function extensionOf(path) {
 
 export function uniqueResourcePath(kind, fileName, resources = [], files = {}, exceptPath = null) {
   const rule = FILE_RULES[kind] || FILE_RULES.note;
-  const used = new Set(resources.map((resource) => resource.filePath).filter(Boolean));
-  Object.keys(files || {}).forEach((path) => used.add(path));
-  if (exceptPath) used.delete(exceptPath);
+  const used = new Set(resources.flatMap((resource) => [resource.filePath, resource.cover, resource.viewPath]).filter(Boolean).map(resourcePathKey));
+  Object.keys(files || {}).forEach((path) => used.add(resourcePathKey(path)));
+  if (exceptPath) used.delete(resourcePathKey(exceptPath));
   const safeName = sanitizeFileName(fileName, "resource");
   const extension = extensionOf(safeName);
   const stem = extension ? safeName.slice(0, -extension.length) : safeName;
   let count = 1;
   let candidate = `assets/resources/${rule.folder}/${safeName}`;
-  while (used.has(candidate)) candidate = `assets/resources/${rule.folder}/${stem}-${++count}${extension}`;
+  while (used.has(resourcePathKey(candidate))) candidate = `assets/resources/${rule.folder}/${stem}-${++count}${extension}`;
   return candidate;
 }
 
 export function isSafeRelativePath(path) {
   if (!path || typeof path !== "string") return false;
-  if (path.includes("\\") || path.includes("..") || path.startsWith("/") || /^[a-z]+:/i.test(path)) {
+  if (
+    path.includes("\\") ||
+    path.includes("..") ||
+    path.startsWith("/") ||
+    /[:<>"|?*%]/.test(path) ||
+    /[\u0000-\u001f\u007f]/.test(path)
+  ) {
     return false;
   }
-  return !path.split("/").some((segment) => !segment || segment === ".");
+  return !path.split("/").some((segment) => !segment || segment === "." || /[. ]$/.test(segment) || WINDOWS_DEVICE_RE.test(segment) || /~[0-9]/.test(segment) || segment.length > 255);
 }
 
 export function isAllowedFilePath(path) {
-  return isSafeRelativePath(path) && LOCAL_RESOURCE_PATH_RE.test(path);
+  return Boolean(resourceFileRule(path));
+}
+
+export function resourceFileRule(path) {
+  if (!isSafeRelativePath(path) || path.length > 240 || !LOCAL_RESOURCE_PATH_RE.test(path)) return null;
+  return Object.values(FILE_RULES).find((rule) => path.startsWith(`assets/resources/${rule.folder}/`) && rule.extensions.includes(extensionOf(path))) || null;
+}
+
+export function isAllowedFilePathForKind(path, kind) {
+  const rule = FILE_RULES[kind];
+  if (!rule || !isAllowedFilePath(path)) return false;
+  const folder = `assets/resources/${rule.folder}/`;
+  return path.startsWith(folder) && rule.extensions.includes(extensionOf(path));
 }
 
 export function isAllowedCoverPath(path) {
-  return isSafeRelativePath(path) && (LOCAL_RESOURCE_PATH_RE.test(path) || LEGACY_COVER_PATH_RE.test(path));
+  return isAllowedFilePathForKind(path, "image") || (isSafeRelativePath(path) && LEGACY_COVER_PATH_RE.test(path) && FILE_RULES.image.extensions.includes(extensionOf(path)));
 }
 
 export function getCategoryMap(categories = DEFAULT_CATEGORIES) {
@@ -154,7 +189,9 @@ export function normalizeResource(resource, index = 0, categories = DEFAULT_CATE
     promptText: resource?.promptText || null,
     featured: resource?.featured === true,
     published: resource?.published === true,
-    displayOrder: Number.isInteger(resource?.displayOrder) ? resource.displayOrder : index + 1,
+    // Preserve missing/invalid orders so validation can report them instead of
+    // silently turning a malformed catalog into a different order.
+    displayOrder: Number.isInteger(resource?.displayOrder) ? resource.displayOrder : null,
     youtubeUrl: resource?.youtubeUrl || null,
     instagramUrl: resource?.instagramUrl || null,
     viewPath: resource?.viewPath || null,
@@ -162,7 +199,7 @@ export function normalizeResource(resource, index = 0, categories = DEFAULT_CATE
 }
 
 export function normalizeCatalog(input) {
-  const categories = Array.isArray(input?.categories) && input.categories.length ? input.categories : DEFAULT_CATEGORIES;
+  const categories = Array.isArray(input?.categories) ? input.categories : DEFAULT_CATEGORIES;
   const resources = Array.isArray(input?.resources) ? input.resources.map((resource, index) => normalizeResource(resource, index, categories)) : [];
   return {
     version: RESOURCE_VERSION,
@@ -174,7 +211,7 @@ export function normalizeCatalog(input) {
 export function sortResources(resources) {
   return [...resources].sort((a, b) => {
     const order = (a.displayOrder || 0) - (b.displayOrder || 0);
-    return order || String(a.title).localeCompare(String(b.title));
+    return order || String(a.title).localeCompare(String(b.title)) || String(a.id).localeCompare(String(b.id));
   });
 }
 
@@ -189,6 +226,11 @@ export function validateCatalog(input, options = {}) {
   const categories = getCategoryMap(catalog.categories);
   const ids = new Set();
   const orders = new Set();
+  try {
+    assertNoPathAliases(catalog.resources.flatMap((resource) => [resource.filePath, resource.cover, resource.viewPath]).filter(Boolean));
+  } catch (error) {
+    errors.push(error.message);
+  }
 
   if (!catalog.categories.length) errors.push("Add at least one resource category.");
   catalog.categories.forEach((category, index) => {
@@ -211,8 +253,15 @@ export function validateCatalog(input, options = {}) {
 
     if (resource.filePath) {
       if (!isAllowedFilePath(resource.filePath)) errors.push(`${label}: file path must stay inside public/assets/resources.`);
+      if (resource.kind !== "episode" && !isAllowedFilePathForKind(resource.filePath, resource.kind)) {
+        errors.push(`${label}: ${resource.kind} files must use the matching resource folder and extension.`);
+      }
       if (typeof options.fileExists === "function" && !options.fileExists(resource.filePath)) {
-        errors.push(`${label}: file "${resource.filePath}" is missing.`);
+        if (resource.published) {
+          errors.push(`${label}: file "${resource.filePath}" is missing.`);
+        } else {
+          warnings.push(`${label}: draft file "${resource.filePath}" is not staged; it will stay out of the public export.`);
+        }
       }
       const extension = extensionOf(resource.filePath);
       const fileRule = FILE_RULES[resource.kind];
@@ -227,7 +276,9 @@ export function validateCatalog(input, options = {}) {
 
     if (resource.cover) {
       if (!isAllowedCoverPath(resource.cover)) errors.push(`${label}: cover path is outside the public asset allowlist.`);
-      if (typeof options.fileExists === "function" && !options.fileExists(resource.cover)) warnings.push(`${label}: cover "${resource.cover}" is missing and will not preview.`);
+      if (typeof options.fileExists === "function" && !options.fileExists(resource.cover)) {
+        (resource.published ? errors : warnings).push(`${label}: cover is missing and will not preview.`);
+      }
     }
 
     if (resource.kind === "prompt" && resource.published && !String(resource.promptText || "").trim()) {
@@ -242,6 +293,9 @@ export function validateCatalog(input, options = {}) {
     if (resource.youtubeUrl && !URL_PROTOCOL_RE.test(resource.youtubeUrl)) errors.push(`${label}: YouTube URL must use http or https.`);
     if (resource.instagramUrl && !URL_PROTOCOL_RE.test(resource.instagramUrl)) errors.push(`${label}: Instagram URL must use http or https.`);
     if (resource.viewPath && !isAllowedFilePath(resource.viewPath)) errors.push(`${label}: view path is outside the public asset allowlist.`);
+    if (resource.viewPath && typeof options.fileExists === "function" && !options.fileExists(resource.viewPath)) {
+      (resource.published ? errors : warnings).push(`${label}: view file is missing.`);
+    }
   });
 
   const expectedOrders = Array.from({ length: catalog.resources.length }, (_, index) => index + 1);
@@ -264,8 +318,10 @@ export function toPublicCatalog(input) {
     generatedFrom: "src/data/resourceCatalog.json",
     categories: catalog.categories,
     resources: publicResources,
-    prompts: publicResources.filter((resource) => resource.kind === "prompt"),
-    downloads: publicResources.filter((resource) => resource.filePath && ["pdf", "note", "prompt"].includes(resource.kind)),
+    // Keep one public resource record per item. These ID indexes are useful to
+    // static tooling without duplicating full prompt/file metadata.
+    prompts: publicResources.filter((resource) => resource.kind === "prompt").map((resource) => resource.id),
+    downloads: publicResources.filter((resource) => resource.filePath && ["pdf", "note", "prompt"].includes(resource.kind)).map((resource) => resource.id),
   };
 }
 

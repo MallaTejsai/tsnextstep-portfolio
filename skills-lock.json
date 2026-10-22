@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "skills": {
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "ref": "6010f91a9935f1c167dfc500fb1a475681892e6b",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "65049e1890f5fedf8f8e1144848f07bcda788e51c22bac78afbd073aeb486725"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "ref": "dad8dbb3aac21ad1fa236c110315ef4abece23e8",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "1a563228fc964107046ceda86034c60f527b1037a40b9372fac16e2473a83c82"
+    },
+    "motion-design": {
+      "source": "LottieFiles/motion-design-skill",
+      "sourceType": "github",
+      "ref": "f9a8a041b85185ee4881b3471d3415e939aac772",
+      "skillPath": "skills/motion-design/SKILL.md",
+      "computedHash": "4f16f46c81f25a2a25b7a4720b7ea001e65f384b31b5b7f4b455fef87fbc9016"
+    }
+  }
+}

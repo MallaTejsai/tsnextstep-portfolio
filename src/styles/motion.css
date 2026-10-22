@@ -1,0 +1,1125 @@
+/* ============================================================
+   TS nextstep V3.1 — depth, motion and glass layer
+   Loaded after v3.css. It keeps the crimson/black art direction,
+   readable type and quiet content density, then puts back what a
+   premium surface needs: ambient depth, entrance choreography,
+   real 3D composition and a tiered glass system.
+   Rules only ever start from a visible resting state, so every
+   prefers-reduced-motion fallback renders the finished design.
+   ============================================================ */
+
+:root {
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px rgba(0, 0, 0, 0.26);
+  --elev-2: 0 2px 4px rgba(0, 0, 0, 0.34), 0 20px 46px rgba(0, 0, 0, 0.32);
+  --elev-3: 0 6px 12px rgba(0, 0, 0, 0.4), 0 40px 90px rgba(0, 0, 0, 0.42);
+  --rim-crimson: rgba(225, 29, 53, 0.34);
+  --rim-crimson-soft: rgba(225, 29, 53, 0.18);
+  --glass-nav: rgba(13, 13, 18, 0.52);
+  --glass-panel: rgba(27, 27, 34, 0.52);
+  --glass-raised: rgba(34, 34, 43, 0.5);
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.022) 42%, transparent 68%);
+  --tilt-max: 6;
+}
+
+/* ============================================================
+   Scroll reveals — content arrives, then holds perfectly still.
+   Wrapped in no-preference so reduced-motion users get the
+   visible resting state from base.css instead of a hidden one.
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.7s var(--ease),
+      transform 0.7s var(--ease);
+    transition-delay: var(--reveal-delay, 0s);
+  }
+
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   Ambient backdrop — slow drift, not idle noise
+   ============================================================ */
+
+.backdrop-orb-1 {
+  animation: orb-drift-a 34s ease-in-out infinite;
+}
+
+.backdrop-orb-2 {
+  animation: orb-drift-b 42s ease-in-out infinite;
+}
+
+.backdrop-grid {
+  animation: grid-breathe 18s ease-in-out infinite;
+}
+
+/* v3.css dims the light fields to ~0.12 alpha and keeps them there; the
+   restoration layer puts real atmospheric light back so translucent
+   surfaces have something to reveal. */
+.backdrop-orb {
+  opacity: 0.8;
+}
+
+.backdrop-orb-1 {
+  background: radial-gradient(circle, rgba(225, 29, 53, 0.4), rgba(137, 13, 32, 0.16) 45%, transparent 68%);
+}
+
+.backdrop-orb-2 {
+  background: radial-gradient(circle, rgba(137, 13, 32, 0.36), transparent 68%);
+}
+
+.cursor-glow {
+  background: radial-gradient(circle, rgba(225, 29, 53, 0.13), transparent 62%);
+}
+
+@keyframes orb-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-3vw, 3vh, 0) scale(1.06);
+  }
+}
+
+@keyframes orb-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3vw, -2vh, 0) scale(1.08);
+  }
+}
+
+@keyframes grid-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* ============================================================
+   Navigation — glass plane with a real state transition
+   ============================================================ */
+
+.nav,
+.nav.is-scrolled {
+  transition:
+    background-color var(--duration-ui) var(--ease),
+    border-color var(--duration-ui) var(--ease),
+    box-shadow var(--duration-ui) var(--ease);
+}
+
+.nav.is-scrolled {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+}
+
+.nav-link {
+  transition: color var(--duration-ui) var(--ease);
+}
+
+.nav-link::after {
+  transition: transform var(--duration-ui) var(--ease), background-color var(--duration-ui) var(--ease);
+}
+
+.mobile-menu.is-open .mobile-link {
+  animation: fade-up 0.5s var(--ease) both;
+}
+
+.mobile-menu.is-open .mobile-link:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.mobile-menu.is-open .mobile-link:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.mobile-menu.is-open .mobile-link:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.mobile-menu.is-open .mobile-link:nth-child(5) {
+  animation-delay: 0.2s;
+}
+.mobile-menu.is-open .mobile-link:nth-child(6) {
+  animation-delay: 0.25s;
+}
+
+/* ============================================================
+   Hero — staged entrance choreography
+   ============================================================ */
+
+/* Cinematic hero light: crimson pools layered above the fixed backdrop,
+   clipped by .hero's overflow. v3 reduced the original wash to a 0.055
+   strip and killed the pseudo at rest — this is the full restoration. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(760px 520px at 78% 24%, rgba(225, 29, 53, 0.17), transparent 64%),
+    radial-gradient(640px 460px at 10% 90%, rgba(137, 13, 32, 0.16), transparent 66%),
+    radial-gradient(1200px 720px at 50% -24%, rgba(225, 29, 53, 0.08), transparent 72%);
+}
+
+/* Desktop display scale — v3 flattened the cinematic clamp to 4.25rem. */
+@media (min-width: 900px) {
+  .hero-title {
+    font-size: clamp(3.4rem, 5.4vw, 4.75rem);
+    letter-spacing: -0.045em;
+  }
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-copy-col {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-kicker-row {
+    animation: fade-up 0.7s var(--ease) 0.05s both;
+  }
+
+  .hero-title .line {
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+
+  .hero-title .line > span {
+    animation: line-up 0.9s var(--ease) both;
+  }
+
+  .hero-title .line:nth-child(1) > span {
+    animation-delay: 0.12s;
+  }
+
+  .hero-title .line:nth-child(2) > span {
+    animation-delay: 0.26s;
+  }
+
+  .hero-copy {
+    animation: fade-up 0.8s var(--ease) 0.4s both;
+  }
+
+  .hero-roles {
+    animation: fade-up 0.8s var(--ease) 0.5s both;
+  }
+
+  .hero-actions {
+    animation: fade-up 0.8s var(--ease) 0.6s both;
+  }
+
+  .hero-stats {
+    animation: fade-up 0.8s var(--ease) 0.7s both;
+  }
+
+  .hero-portrait {
+    animation: portrait-arrive 1s var(--ease) 0.18s both;
+  }
+
+  .hero-scroll .bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent, var(--crimson-bright));
+    animation: scroll-line 2.2s ease-in-out infinite;
+  }
+}
+
+@keyframes line-up {
+  from {
+    opacity: 0;
+    transform: translateY(105%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes portrait-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- portrait orbit stage ---------- */
+
+.hero-portrait {
+  position: relative;
+}
+
+.portrait-stage {
+  inset: -8% -11% 5%;
+  z-index: 1;
+}
+
+.portrait-labels {
+  position: absolute;
+  inset: -7% -2% 6%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.portrait-labels .label-2 {
+  right: 0;
+}
+
+.brand-chip {
+  z-index: 4;
+}
+
+.portrait-frame {
+  z-index: 2;
+  border-color: rgba(255, 125, 139, 0.34);
+  transition:
+    border-color var(--duration-panel) var(--ease),
+    box-shadow var(--duration-panel) var(--ease);
+  /* Perspective travel is written per frame by usePointerLight, so the
+     transform itself must not transition on top of the lerp. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(225, 29, 53, 0.14),
+    var(--elev-3),
+    0 0 80px rgba(225, 29, 53, 0.18);
+}
+
+.portrait-frame::after {
+  background:
+    linear-gradient(180deg, transparent 58%, rgba(5, 5, 7, 0.55) 100%),
+    radial-gradient(120% 70% at 50% 0%, rgba(225, 29, 53, 0.16), transparent 62%);
+}
+
+.orbit-ring {
+  transition: border-color 0.6s ease;
+}
+
+.float-label {
+  z-index: 3;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring,
+  .float-label {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Work — pointer light, lift and depth on the featured surface
+   ============================================================ */
+
+.project-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: var(--elev-1);
+  transition:
+    border-color 0.35s ease,
+    background-color 0.35s ease,
+    transform 0.35s var(--ease),
+    box-shadow 0.35s ease;
+}
+
+.project-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(170px 140px at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.13), transparent 70%),
+    radial-gradient(
+      560px 280px at var(--mx, 50%) var(--my, 0%),
+      rgba(225, 29, 53, 0.16),
+      transparent 68%
+    );
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
+}
+
+.project-card:hover::before,
+.project-card:focus-within::before {
+  opacity: 1;
+}
+
+/* The featured surface carries a permanent sheen; hover takes it to full. */
+.project-card.project-featured::before {
+  opacity: 0.45;
+}
+
+.project-card.project-featured:hover::before,
+.project-card.project-featured:focus-within::before {
+  opacity: 1;
+}
+
+.project-card:hover,
+.project-card:focus-within {
+  transform: translateY(-4px);
+  box-shadow: var(--elev-2);
+  border-color: var(--rim-crimson);
+}
+
+.work-grid .project-card {
+  box-shadow: none;
+}
+
+.work-grid .project-card:hover,
+.work-grid .project-card:focus-within {
+  box-shadow: none;
+}
+
+.work-featured-wrap::before {
+  background: radial-gradient(circle at 70% 40%, rgba(225, 29, 53, 0.22), transparent 62%);
+  filter: blur(8px);
+  transition: opacity var(--duration-panel) var(--ease);
+  opacity: 0.9;
+}
+
+.project-card.project-featured {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    var(--elev-3);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.project-card.project-featured:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    var(--elev-3),
+    0 0 0 1px var(--rim-crimson-soft);
+}
+
+.mini-flow li {
+  transition: background-color 0.3s ease;
+}
+
+.mini-flow li:hover {
+  background: rgba(225, 29, 53, 0.08);
+}
+
+/* ============================================================
+   ALLI — readable system diagram over a real 3D composition
+   ============================================================ */
+
+.alli-scene.alli-system {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(1.25rem, 2.6vw, 2.25rem);
+  align-items: center;
+  aspect-ratio: auto;
+  min-height: 0;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  margin: 0;
+  overflow: hidden;
+  perspective: 1200px;
+  perspective-origin: 50% 44%;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(90% 70% at 12% 0%, rgba(225, 29, 53, 0.16), transparent 60%),
+    radial-gradient(70% 60% at 95% 100%, rgba(137, 13, 32, 0.16), transparent 62%),
+    linear-gradient(180deg, #0d0e12 0%, #08080b 100%);
+  box-shadow: var(--elev-2);
+}
+
+.alli-system::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--glass-sheen);
+  opacity: 0.85;
+}
+
+.system-stage {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 4 / 3;
+  min-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background:
+    radial-gradient(110% 80% at 50% 6%, rgba(225, 29, 53, 0.14), transparent 58%),
+    radial-gradient(80% 60% at 80% 90%, rgba(137, 13, 32, 0.1), transparent 60%),
+    linear-gradient(180deg, #0a0b11 0%, #06070a 100%);
+}
+
+/* Pointer-tracked specular sweeping the scene surface. --lx/--ly/--lit are
+   written by AlliScene's own parallax listener; a faint resting pool keeps
+   the material visible before the pointer engages it. */
+.system-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    340px 280px at var(--lx, 62%) var(--ly, 6%),
+    rgb(255 255 255 / calc(0.07 + 0.13 * var(--lit, 0))),
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+.system-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(0.9rem, 1.6vw, 1.35rem);
+  align-content: center;
+  min-width: 0;
+}
+
+/* Floating labels keep clear of the depth-separated panels. */
+.scene-node.n2 {
+  top: 26%;
+}
+
+.alli-system .system-caption {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 5;
+  padding: 0.32rem 0.72rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(6, 7, 10, 0.7);
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.alli-system .system-caption::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--crimson-bright);
+  vertical-align: middle;
+}
+
+.system-wordmark {
+  font-size: clamp(2.5rem, 4.4vw, 4rem);
+}
+
+.system-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.alli-system .system-areas {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+.alli-system .system-areas ul {
+  margin-top: 0.6rem;
+}
+
+.alli-system .system-areas li {
+  position: relative;
+  padding-left: 0.9rem;
+}
+
+.alli-system .system-areas li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--crimson);
+  box-shadow: 0 0 8px rgba(225, 29, 53, 0.7);
+}
+
+.system-stack {
+  gap: 0.65rem;
+}
+.system-stack button {
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-panel);
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--duration-ui) var(--ease),
+    background-color var(--duration-ui) var(--ease),
+    transform var(--duration-ui) var(--ease),
+    box-shadow var(--duration-ui) var(--ease);
+}
+
+.system-stack button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-sheen);
+  opacity: 0;
+  transition: opacity var(--duration-ui) var(--ease);
+  pointer-events: none;
+}
+
+.system-stack button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2);
+}
+
+.system-stack button:hover::after {
+  opacity: 1;
+}
+
+.system-stack button[aria-pressed="true"] {
+  background: linear-gradient(160deg, rgba(225, 29, 53, 0.24), rgba(20, 20, 23, 0.9));
+  border-color: var(--rim-crimson);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.alli-system .system-detail {
+  min-height: 7rem;
+  padding: 0 0 0 1rem;
+  border: 0;
+  border-left: 1px solid var(--rim-crimson);
+  background: transparent;
+}
+
+@media (max-width: 1024px) {
+  .alli-scene.alli-system {
+    grid-template-columns: 1fr;
+  }
+
+  .system-stage {
+    min-height: 320px;
+  }
+
+  .alli-system .system-caption {
+    top: 1.15rem;
+    left: 1.15rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .alli-scene.alli-system {
+    padding: 0.85rem;
+  }
+
+  .system-stage {
+    aspect-ratio: 1 / 1;
+    min-height: 300px;
+  }
+
+  .system-wordmark {
+    font-size: clamp(2.25rem, 12vw, 3rem);
+  }
+}
+
+/* ============================================================
+   Liquid glass — reflective edge + pointer-tracked specular
+   `.liquid` owns both pseudo-elements, so it only goes on surfaces
+   where ::before and ::after are free. --lx/--ly/--lit are written by
+   usePointerLight; without a fine pointer, or under reduced motion,
+   --lit stays 0 and only the resting edge light is visible.
+   ============================================================ */
+
+.liquid {
+  isolation: isolate;
+}
+
+.contact-form {
+  position: relative;
+}
+
+.liquid::before,
+.liquid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Resting state carries a static top-light sheen and a four-edge rim, so
+   the material reads as glass even before the pointer engages. The pointer
+   then lifts the specular from 0.45 to full via --lit (written by
+   usePointerLight; inherits from host elements like .hero). */
+.liquid::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.13),
+    rgba(255, 255, 255, 0.035) 26%,
+    transparent 52%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 1px 0 0 rgba(255, 255, 255, 0.06),
+    inset -1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.liquid::after {
+  background: radial-gradient(
+    var(--spec-w, 320px) var(--spec-h, 230px) at var(--lx, 72%) var(--ly, 4%),
+    rgba(255, 255, 255, 0.18),
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  opacity: calc(0.45 + 0.55 * var(--lit, 0));
+  transition: opacity 0.45s var(--ease);
+}
+
+/* Larger surfaces spread the highlight instead of pooling it. */
+.alli-status.liquid::after,
+.nav.liquid::after {
+  --spec-w: 520px;
+  --spec-h: 300px;
+}
+
+.contact-form.liquid::after {
+  --spec-w: 640px;
+  --spec-h: 420px;
+}
+
+/* The hero is its own light surface: usePointerLight writes --lx/--ly/--lit
+   onto the section itself, so the atmospheric field answers the pointer. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    700px 480px at var(--lx, 72%) var(--ly, 10%),
+    rgb(255 255 255 / calc(0.10 * var(--lit, 0))),
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+/* ============================================================
+   Tiered glass — floating chrome, featured surfaces, dense matte
+   ============================================================ */
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav,
+  .nav.is-scrolled {
+    background: rgba(11, 11, 16, 0.5);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .nav.is-scrolled {
+    background: rgba(9, 9, 13, 0.74);
+    border-bottom-color: var(--rim-crimson-soft);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.46), inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  .mobile-menu {
+    background: rgba(14, 14, 16, 0.86);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  .alli-status,
+  .brand-chip {
+    background: var(--glass-panel);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .float-label {
+    background: rgba(12, 12, 18, 0.55);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  .project-card.project-featured {
+    background:
+      var(--glass-sheen),
+      linear-gradient(145deg, rgba(225, 29, 53, 0.18), transparent 46%),
+      rgba(255, 255, 255, 0.05),
+      rgba(16, 16, 22, 0.62);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border-color: rgba(255, 255, 255, 0.17);
+  }
+
+  .resource-featured {
+    background:
+      var(--glass-sheen),
+      linear-gradient(150deg, rgba(225, 29, 53, 0.18), transparent 52%),
+      rgba(255, 255, 255, 0.05),
+      rgba(17, 17, 24, 0.6);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.17);
+  }
+
+  .contact-form {
+    background:
+      var(--glass-sheen),
+      rgba(17, 17, 24, 0.6);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .btn-ghost {
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+  }
+
+  .modal {
+    background: rgba(18, 18, 21, 0.9);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+  }
+
+  .download-card,
+  .toolkit-card {
+    background:
+      var(--glass-sheen),
+      rgba(26, 26, 30, 0.7);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+  }
+
+  .alli-scene-badge {
+    background: rgba(6, 7, 10, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* ============================================================
+   Elevation — supporting surfaces share one light glass material;
+   featured surfaces above get the heavier treatment.
+   ============================================================ */
+
+.fact,
+.skill-group,
+.jt-card,
+.journey-card,
+.poster-card,
+.contact-point,
+.pillar,
+.resource-card,
+.prompt-card,
+.toolkit-card,
+.download-card {
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.055),
+    rgba(255, 255, 255, 0.018) 44%,
+    rgba(255, 255, 255, 0.01)
+  );
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--duration-ui) var(--ease),
+    background-color var(--duration-ui) var(--ease),
+    transform var(--duration-ui) var(--ease),
+    box-shadow var(--duration-ui) var(--ease);
+}
+
+.fact:hover,
+.skill-group:hover,
+.jt-item:hover .jt-card,
+.poster-card:hover,
+.contact-point:hover,
+.pillar:hover,
+.resource-card:hover,
+.prompt-card:hover,
+.toolkit-card:hover,
+.download-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--elev-2);
+}
+
+.poster-card:hover,
+.resource-card:hover {
+  border-color: var(--rim-crimson);
+}
+
+.arch-panel {
+  box-shadow: var(--elev-2);
+}
+
+.arch-node {
+  box-shadow: var(--elev-1);
+}
+
+.arch-node.is-active {
+  box-shadow: var(--elev-2), inset 0 0 0 1px var(--rim-crimson-soft);
+}
+
+.alli-highlight {
+  box-shadow: var(--elev-1);
+}
+
+.rm-card,
+.rm-item.is-current .rm-card {
+  box-shadow: var(--elev-1);
+}
+
+.rm-item.is-current .rm-card {
+  border-color: var(--rim-crimson);
+}
+
+.rm-item.is-in:hover .rm-card,
+.rm-item.is-current.is-in:hover .rm-card {
+  transform: translateY(-3px);
+  box-shadow: var(--elev-2);
+}
+
+.jt-node {
+  box-shadow: 0 0 0 4px rgba(225, 29, 53, 0.12), 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.jt-item:first-child .jt-node {
+  animation: node-breathe 3.4s ease-in-out infinite;
+}
+
+@keyframes node-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(225, 29, 53, 0.12), 0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(225, 29, 53, 0.06), 0 8px 24px rgba(0, 0, 0, 0.42);
+  }
+}
+
+.rm-node::after {
+  display: block;
+  animation: node-breathe 3.4s ease-in-out infinite;
+}
+
+.rm-rail-fill::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--crimson-bright);
+  box-shadow: 0 0 14px rgba(225, 29, 53, 0.85);
+}
+
+@media (min-width: 769px) {
+  .rm-rail-fill::after {
+    top: auto;
+    right: -4px;
+    bottom: -4px;
+  }
+}
+
+/* ============================================================
+   Imagery — cover art reacts without zooming the layout
+   ============================================================ */
+
+.resource-card:hover .resource-poster img,
+.poster-card:hover .poster-media img,
+.poster-open:hover {
+  transform: scale(1.05);
+}
+
+.resource-poster img,
+.poster-media img {
+  transition: transform 0.6s var(--ease), filter 0.6s var(--ease);
+}
+
+/* ============================================================
+   Legibility floor — functional labels never sit under 11px
+   (Impeccable detect: undersized-ui-text / tiny-text)
+   ============================================================ */
+
+.jt-tag,
+.poster-num,
+.poster-cta,
+.resource-filter-label,
+.content-brand em,
+.alli-system .system-caption {
+  font-size: 0.6875rem;
+}
+
+.alli-status-version {
+  font-size: 0.75rem;
+}
+
+/* ============================================================
+   Section atmosphere — every band gets its own light composition,
+   alternating sides so sections read as places, not slabs. Alt bands
+   turn translucent so the fixed crimson fields show through.
+   ============================================================ */
+
+.section {
+  background-image:
+    radial-gradient(960px 520px at 88% -8%, rgba(225, 29, 53, 0.1), transparent 62%),
+    radial-gradient(780px 480px at -8% 106%, rgba(137, 13, 32, 0.11), transparent 64%);
+}
+
+.section.section-alt {
+  background:
+    radial-gradient(960px 520px at 8% -8%, rgba(225, 29, 53, 0.1), transparent 62%),
+    radial-gradient(840px 500px at 104% 104%, rgba(137, 13, 32, 0.12), transparent 64%),
+    linear-gradient(180deg, rgba(16, 16, 21, 0.74), rgba(12, 12, 15, 0.62));
+  border-block-color: rgba(255, 255, 255, 0.06);
+}
+
+.resource-hub::before {
+  content: "";
+  opacity: 0.9;
+  background:
+    radial-gradient(60% 45% at 100% 0%, rgba(225, 29, 53, 0.16), transparent 72%),
+    radial-gradient(48% 40% at 0% 100%, rgba(137, 13, 32, 0.12), transparent 72%);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.footer {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(5, 5, 7, 0.72));
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ============================================================
+   Reduced transparency — glass degrades to solid, high-contrast
+   ============================================================ */
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid::before,
+  .liquid::after,
+  .hero::after,
+  .project-card::before,
+  .system-stage::after {
+    display: none;
+  }
+
+  .nav,
+  .nav.is-scrolled,
+  .mobile-menu,
+  .alli-status,
+  .brand-chip,
+  .float-label,
+  .project-card.project-featured,
+  .resource-featured,
+  .contact-form,
+  .modal,
+  .download-card,
+  .toolkit-card,
+  .system-stack button,
+  .alli-scene.alli-system {
+    background: var(--panel-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+}
+
+/* ============================================================
+   Reduced motion — keep the composition, drop the movement
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .alli-system::after {
+    animation: none;
+  }
+
+  .project-card,
+  .fact,
+  .skill-group,
+  .jt-card,
+  .journey-card,
+  .poster-card,
+  .contact-point,
+  .pillar,
+  .resource-card,
+  .prompt-card,
+  .toolkit-card,
+  .download-card,
+  .arch-node,
+  .system-stack button,
+  .rm-card,
+  .alli-highlight {
+    transition: none;
+  }
+
+  .project-card:hover,
+  .project-card:focus-within,
+  .fact:hover,
+  .skill-group:hover,
+  .jt-item:hover .jt-card,
+  .poster-card:hover,
+  .contact-point:hover,
+  .pillar:hover,
+  .resource-card:hover,
+  .prompt-card:hover,
+  .toolkit-card:hover,
+  .download-card:hover,
+  .rm-item.is-in:hover .rm-card,
+  .rm-item.is-current.is-in:hover .rm-card,
+  .system-stack button:hover {
+    transform: none;
+  }
+
+  .resource-card:hover .resource-poster img,
+  .poster-card:hover .poster-media img,
+  .poster-open:hover {
+    transform: none;
+  }
+}

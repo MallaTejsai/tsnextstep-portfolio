@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import {
   RESOURCE_CATEGORIES,
@@ -6,7 +6,8 @@ import {
   RESOURCES,
 } from "../data/resources";
 import { asset } from "../lib/asset";
-import "../styles/resources.css";
+import { usePointerLight } from "../lib/usePointerLight";
+import { useTilt } from "../lib/useTilt";
 
 function ExternalArrow() {
   return (
@@ -99,6 +100,8 @@ function PlatformLink({ label, url, resource }) {
 }
 
 function ResourceCard({ resource }) {
+  if (resource.kind === "prompt") return <PromptCard prompt={resource} />;
+
   return (
     <article className="resource-card">
       <ResourcePoster resource={resource} />
@@ -274,10 +277,14 @@ export default function ResourceHub({ resources = RESOURCES }) {
   const [type, setType] = useState("all");
   const [category, setCategory] = useState("all");
 
-  const publishedResources = resources.filter((resource) => resource.published === true);
+  // Episodes already have a dedicated TS nextstep gallery. Keep the toolkit
+  // focused on resources people can read, copy or download once.
+  const publishedResources = resources.filter((resource) => resource.published === true && resource.kind !== "episode");
   const featuredResource = publishedResources.find((resource) => resource.featured) || publishedResources[0];
-  const promptResources = publishedResources.filter((resource) => resource.kind === "prompt");
-  const downloadResources = publishedResources.filter((resource) => resource.filePath && ["pdf", "note", "prompt"].includes(resource.kind));
+  const featuredRef = useRef(null);
+  useTilt(featuredRef, { max: 5.5, lift: -6, enabled: Boolean(featuredResource) });
+  usePointerLight(featuredRef, { enabled: Boolean(featuredResource) });
+  const downloadResources = publishedResources.filter((resource) => resource.filePath && ["pdf", "note"].includes(resource.kind));
 
   const filteredResources = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -328,10 +335,10 @@ export default function ResourceHub({ resources = RESOURCES }) {
         </header>
 
         {featuredResource ? (
-          <article className="resource-featured">
+          <article className="resource-featured liquid" ref={featuredRef}>
             <ResourcePoster resource={featuredResource} featured />
             <div className="resource-featured-copy">
-              <span className="resource-featured-kicker">Featured field note · {featuredResource.series}</span>
+              <span className="resource-featured-kicker">Featured resource · {featuredResource.category}</span>
               <h3>{featuredResource.title}</h3>
               <p>{featuredResource.description}</p>
               <div className="resource-featured-meta">
@@ -353,7 +360,7 @@ export default function ResourceHub({ resources = RESOURCES }) {
               <span className="eyebrow">The library</span>
               <h3>Find a useful <span className="accent">starting point.</span></h3>
             </div>
-            <p>Search actual titles, descriptions, categories and tags — not just visual placeholders.</p>
+              <p>Search actual titles, descriptions, categories and tags. Prompts appear once with their copy action.</p>
           </div>
 
           <div className="resource-controls">
@@ -392,19 +399,13 @@ export default function ResourceHub({ resources = RESOURCES }) {
         </div>
 
         <div className="resource-toolkit-heading">
-          <span className="eyebrow">More soon, only when real</span>
-          <h3>Prompt Library <span className="accent">+ downloads.</span></h3>
-          <p>These shelves are wired for future material without pretending that unpublished files exist.</p>
+          <div>
+            <span className="eyebrow">Downloads</span>
+            <h3>Files worth <span className="accent">keeping.</span></h3>
+          </div>
+          <p>PDFs and notes appear here only when a real public file is registered and validated.</p>
         </div>
         <div className="resource-toolkit-grid">
-          {promptResources.length ? promptResources.map((prompt) => <PromptCard key={prompt.id} prompt={prompt} />) : (
-            <EmptyToolkitCard
-              kind="prompts"
-              anchor="prompt-library"
-              title="Prompt Library"
-              description="A focused place for practical coding, learning and creative prompts. Prompts will appear here only after they are approved for publication."
-            />
-          )}
           {downloadResources.length ? downloadResources.map((resource) => <DownloadCard key={resource.id} resource={resource} />) : (
             <EmptyToolkitCard
               kind="downloads"

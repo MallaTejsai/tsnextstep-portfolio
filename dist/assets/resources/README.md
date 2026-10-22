@@ -31,11 +31,14 @@ public/assets/resources/
    material.
 3. Open Resource Studio, drop the PDF, edit its details, choose a category and
    tags, and publish it only when the file is ready for visitors.
-4. Click **Export for Website** or **Save to repository**. The Studio chooses a
-   safe path such as `assets/resources/pdfs/python-notes.pdf`, detects filename
-   conflicts and validates the catalog before export.
-5. Run `npm run build`. The build refuses to continue if a published file is
-   missing or a path, ID, category or display order is invalid.
+4. Click **Save Changes**. The loopback bridge chooses a safe path such as
+   `assets/resources/pdfs/python-notes.pdf`, detects filename conflicts, validates
+   the canonical catalog and regenerates both public manifests. Published files go
+   to `public/`; unpublished files stay under ignored `.resource-studio/drafts/`.
+5. Use **Export ZIP** as a recovery option, then run `npm run build`. The build refuses to continue if a published file is
+   missing or a path, ID, category or display order is invalid. It also moves
+   stale managed files out of `public/` into the local `.resource-studio/trash/`
+   recovery area so an unpublished draft cannot ship accidentally.
 
 The download UI renders only records with a real `filePath`; missing files are
 never presented as working downloads.
@@ -76,11 +79,12 @@ npm run dev
 ```
 
 Open the Studio URL, search for the new title, filter by its type, edit and
-preview it, try Move Up / Move Down, then export the package. Copy the package
-into a disposable checkout or use Save to repository and run:
+preview it, try Move Up / Move Down, then save through the local bridge. Use ZIP
+export as a recovery option and run:
 
 ```bash
 npm run build
+npm run verify
 npm run preview
 ```
 

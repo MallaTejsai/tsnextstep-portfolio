@@ -14,8 +14,8 @@
   content: "";
   pointer-events: none;
   background:
-    radial-gradient(60% 45% at 100% 0%, rgba(77, 141, 255, 0.12), transparent 72%),
-    radial-gradient(48% 40% at 0% 100%, rgba(155, 107, 255, 0.09), transparent 72%);
+    radial-gradient(60% 45% at 100% 0%, rgba(225, 29, 53, 0.12), transparent 72%),
+    radial-gradient(48% 40% at 0% 100%, rgba(137, 13, 32, 0.09), transparent 72%);
 }
 
 .resource-hub-container {
@@ -46,7 +46,7 @@
 }
 
 .resource-hub-count strong {
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
   font-size: 1.8rem;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -74,8 +74,8 @@
 }
 
 .resource-search:focus-within {
-  border-color: rgba(77, 141, 255, 0.7);
-  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.1);
+  border-color: rgba(225, 29, 53, 0.7);
+  box-shadow: 0 0 0 3px rgba(225, 29, 53, 0.1);
 }
 
 .resource-search-icon {
@@ -164,15 +164,15 @@
 }
 
 .resource-filter-button:hover {
-  border-color: rgba(77, 141, 255, 0.5);
-  color: var(--blue-2, #8fb4ff);
+  border-color: rgba(225, 29, 53, 0.5);
+  color: var(--blue-2, #ff7d8b);
   transform: translateY(-1px);
 }
 
 .resource-filter-button[aria-pressed="true"] {
-  border-color: rgba(77, 141, 255, 0.65);
-  background: rgba(77, 141, 255, 0.14);
-  color: var(--blue-2, #8fb4ff);
+  border-color: rgba(225, 29, 53, 0.65);
+  background: rgba(225, 29, 53, 0.14);
+  color: var(--blue-2, #ff7d8b);
 }
 
 .resource-grid {
@@ -193,7 +193,7 @@
 }
 
 .resource-card:hover {
-  border-color: rgba(77, 141, 255, 0.48);
+  border-color: rgba(225, 29, 53, 0.48);
   box-shadow: 0 20px 46px rgba(0, 0, 0, 0.38);
   transform: translateY(-5px);
 }
@@ -203,7 +203,7 @@
   aspect-ratio: 5 / 6;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 25%, rgba(77, 141, 255, 0.18), transparent 54%),
+    radial-gradient(circle at 50% 25%, rgba(225, 29, 53, 0.18), transparent 54%),
     linear-gradient(150deg, #141722 0%, #08090d 72%);
 }
 
@@ -285,7 +285,7 @@
 }
 
 .resource-kind {
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
 }
 
 .resource-series {
@@ -333,9 +333,9 @@
 }
 
 .resource-platform-link:hover {
-  border-color: rgba(77, 141, 255, 0.55);
-  background: rgba(77, 141, 255, 0.1);
-  color: var(--blue-2, #8fb4ff);
+  border-color: rgba(225, 29, 53, 0.55);
+  background: rgba(225, 29, 53, 0.1);
+  color: var(--blue-2, #ff7d8b);
   transform: translateY(-2px);
 }
 
@@ -361,7 +361,7 @@
 }
 
 .resource-empty-mark {
-  color: var(--blue, #4d8dff);
+  color: var(--blue, #e11d35);
   font-family: var(--font-display, system-ui, sans-serif);
   font-size: 2rem;
   line-height: 1;
@@ -382,10 +382,10 @@
 .resource-reset {
   margin-top: 1.1rem;
   padding: 0.65rem 0.9rem;
-  border: 1px solid rgba(77, 141, 255, 0.5);
+  border: 1px solid rgba(225, 29, 53, 0.5);
   border-radius: 999px;
-  background: rgba(77, 141, 255, 0.1);
-  color: var(--blue-2, #8fb4ff);
+  background: rgba(225, 29, 53, 0.1);
+  color: var(--blue-2, #ff7d8b);
   font-family: var(--font-display, system-ui, sans-serif);
   font-size: 0.67rem;
   font-weight: 600;
@@ -394,7 +394,7 @@
 }
 
 .resource-reset:hover {
-  background: rgba(77, 141, 255, 0.18);
+  background: rgba(225, 29, 53, 0.18);
 }
 
 .resource-reset-inline {
@@ -403,7 +403,7 @@
 }
 
 .resource-hub :is(button, input, a):focus-visible {
-  outline: 2px solid var(--blue, #4d8dff);
+  outline: 2px solid var(--blue, #e11d35);
   outline-offset: 3px;
 }
 
@@ -473,11 +473,11 @@
   grid-template-columns: minmax(210px, 0.38fr) minmax(0, 0.62fr);
   min-height: 330px;
   overflow: hidden;
-  border: 1px solid rgba(143, 180, 255, 0.26);
+  border: 1px solid rgba(255, 125, 139, 0.26);
   border-radius: 24px;
   background:
-    radial-gradient(70% 120% at 100% 0%, rgba(155, 107, 255, 0.18), transparent 72%),
-    linear-gradient(145deg, rgba(19, 23, 34, 0.98), rgba(7, 8, 12, 0.98));
+    radial-gradient(70% 120% at 100% 0%, rgba(225, 29, 53, 0.18), transparent 72%),
+    linear-gradient(145deg, rgba(25, 16, 20, 0.98), rgba(7, 8, 11, 0.98));
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
 }
 
@@ -502,7 +502,7 @@
 }
 
 .resource-featured-kicker {
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
   font-size: 0.66rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -542,7 +542,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.47rem 0.15rem;
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
   font-size: 0.64rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -618,13 +618,13 @@
 
 .toolkit-card-prompts {
   background:
-    radial-gradient(80% 120% at 0% 0%, rgba(77, 141, 255, 0.13), transparent 70%),
+    radial-gradient(80% 120% at 0% 0%, rgba(225, 29, 53, 0.13), transparent 70%),
     linear-gradient(155deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
 }
 
 .toolkit-card-downloads {
   background:
-    radial-gradient(80% 120% at 100% 0%, rgba(155, 107, 255, 0.13), transparent 70%),
+    radial-gradient(80% 120% at 100% 0%, rgba(137, 13, 32, 0.13), transparent 70%),
     linear-gradient(155deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
 }
 
@@ -647,7 +647,7 @@
 }
 
 .toolkit-card-kicker {
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
 }
 
 .toolkit-card-count,
@@ -680,7 +680,7 @@
 }
 
 .toolkit-empty-note > span:first-child {
-  color: var(--blue, #4d8dff);
+  color: var(--blue, #e11d35);
   font-size: 1.3rem;
 }
 
@@ -706,7 +706,7 @@
 
 .prompt-details summary {
   padding: 0.8rem 0;
-  color: var(--blue-2, #8fb4ff);
+  color: var(--blue-2, #ff7d8b);
   cursor: pointer;
   font-family: var(--font-display, system-ui, sans-serif);
   font-size: 0.72rem;
@@ -756,12 +756,12 @@
 
 .resource-action-primary {
   border-color: transparent;
-  background: var(--accent-fill, #2f6df0);
+  background: var(--accent-fill, #c91830);
   color: #fff;
 }
 
 .resource-action-primary:hover {
-  background: var(--accent-fill-deep, #4c37d6);
+  background: var(--accent-fill-deep, #8e1223);
   transform: translateY(-2px);
 }
 
@@ -770,8 +770,8 @@
 }
 
 .resource-action-secondary:hover {
-  border-color: rgba(77, 141, 255, 0.5);
-  color: var(--blue-2, #8fb4ff);
+  border-color: rgba(225, 29, 53, 0.5);
+  color: var(--blue-2, #ff7d8b);
 }
 
 .prompt-copy-feedback {
@@ -795,10 +795,10 @@
   place-items: center;
   width: 2.7rem;
   height: 2.7rem;
-  border: 1px solid rgba(155, 107, 255, 0.35);
+  border: 1px solid rgba(225, 29, 53, 0.35);
   border-radius: 12px;
-  background: rgba(155, 107, 255, 0.1);
-  color: #c4afff;
+  background: rgba(225, 29, 53, 0.1);
+  color: #ff9aa5;
 }
 
 .download-card-icon svg {

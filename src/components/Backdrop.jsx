@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Full-page ambient layers: grid, blue/violet orbs, grain, particle canvas
- * and a cursor-following blue glow.
- * All layers are pointer-events: none, so interaction is untouched.
+ * Ambient depth layers: grid, crimson light fields, grain, a drifting
+ * particle field and a cursor-following glow. Every layer is
+ * pointer-events: none, and all motion stops under reduced motion,
+ * when the tab is hidden, or when the pointer leaves the document.
  */
 export default function Backdrop() {
   const canvasRef = useRef(null);
@@ -19,6 +20,7 @@ export default function Backdrop() {
     if (!ctx) return undefined;
 
     let raf = 0;
+    let running = false;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -32,14 +34,14 @@ export default function Backdrop() {
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.round(Math.min(90, Math.max(28, (width * height) / 22000)));
+      const count = Math.round(Math.min(72, Math.max(24, (width * height) / 26000)));
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
-        r: Math.random() * 1.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.22,
-        vy: (Math.random() - 0.5) * 0.22,
-        a: Math.random() * 0.45 + 0.15,
+        r: Math.random() * 1.5 + 0.4,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
+        a: Math.random() * 0.4 + 0.14,
       }));
     };
 
@@ -60,7 +62,7 @@ export default function Backdrop() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(140, 175, 255, ${p.a})`;
+        ctx.fillStyle = `rgba(255, 138, 152, ${p.a})`;
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j += 1) {
@@ -68,32 +70,60 @@ export default function Backdrop() {
           const dx = p.x - q.x;
           const dy = p.y - q.y;
           const dist = dx * dx + dy * dy;
-          if (dist < 13000) {
-            const op = (1 - dist / 13000) * 0.16;
+          if (dist < 14000) {
+            const op = (1 - dist / 14000) * 0.14;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = `rgba(77, 141, 255, ${op})`;
+            ctx.strokeStyle = `rgba(225, 29, 53, ${op})`;
             ctx.lineWidth = 0.7;
             ctx.stroke();
           }
         }
       }
 
-      if (!reduce) raf = window.requestAnimationFrame(draw);
+      if (!reduce && !document.hidden) {
+        raf = window.requestAnimationFrame(draw);
+      } else {
+        running = false;
+      }
+    };
+
+    const start = () => {
+      if (running || reduce || document.hidden) return;
+      running = true;
+      raf = window.requestAnimationFrame(draw);
+    };
+
+    const stop = () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = 0;
+      running = false;
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
     };
 
     resize();
-    draw();
+    if (reduce) {
+      draw();
+      running = false;
+    } else {
+      start();
+    }
     window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      window.cancelAnimationFrame(raf);
+      stop();
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
-  /* --- cursor glow (desktop pointers only) --- */
+  /* --- cursor glow (fine pointers only, never under reduced motion) --- */
   useEffect(() => {
     const glow = glowRef.current;
     if (!glow) return undefined;
@@ -124,8 +154,8 @@ export default function Backdrop() {
     };
 
     const tick = () => {
-      x += (tx - x) * 0.12;
-      y += (ty - y) * 0.12;
+      x += (tx - x) * 0.1;
+      y += (ty - y) * 0.1;
       glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       raf = window.requestAnimationFrame(tick);
     };

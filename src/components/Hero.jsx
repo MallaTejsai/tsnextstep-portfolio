@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SITE } from "../data/site";
 import { ALLI_VIDEOS } from "../data/alliVideos";
 import { SKILL_GROUPS } from "../data/skills";
 import { asset } from "../lib/asset";
+import { scrollToId } from "../lib/scroll";
+import { usePointerLight } from "../lib/usePointerLight";
 import { ArrowRight, ArrowUpRight, CoreIcon } from "./icons";
-
-const scrollTo = (id) => {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-};
 
 const PORTRAIT_FILES = ["img.jpeg", "img.png"];
 
@@ -15,16 +13,44 @@ export default function Hero() {
   const [imgIndex, setImgIndex] = useState(0);
   const imgMissing = imgIndex >= PORTRAIT_FILES.length;
 
+  const heroRef = useRef(null);
+  const stageRef = useRef(null);
+  const frameRef = useRef(null);
+  const labelsRef = useRef(null);
+
+  usePointerLight(heroRef, {
+    onFrame: (x, y) => {
+      const dx = x - 0.5;
+      const dy = y - 0.5;
+      const stage = stageRef.current;
+      const frame = frameRef.current;
+      const labels = labelsRef.current;
+      if (stage) {
+        stage.style.transform = `translate3d(${(-dx * 20).toFixed(2)}px, ${(-dy * 13).toFixed(2)}px, 0)`;
+      }
+      if (frame) {
+        frame.style.transform = `perspective(1100px) rotateY(${(dx * 4.5).toFixed(
+          2
+        )}deg) rotateX(${(-dy * 3.5).toFixed(2)}deg) translate3d(${(dx * 5).toFixed(2)}px, ${(
+          dy * 4
+        ).toFixed(2)}px, 0)`;
+      }
+      if (labels) {
+        labels.style.translate = `${(-dx * 15).toFixed(2)}px ${(-dy * 10).toFixed(2)}px`;
+      }
+    },
+  });
+
   return (
-    <section className="hero" id="home" aria-label="Introduction">
+    <section className="hero" id="home" aria-label="Introduction" ref={heroRef}>
       <div className="hero-inner">
         <div className="hero-copy-col">
           <div className="hero-kicker-row">
             <span className="hero-badge">
               <span className="dot" aria-hidden="true" />
-              Building in public
+              Student → Builder → AI developer
             </span>
-            <span className="hero-index">01 / PORTFOLIO</span>
+            <span className="hero-index">01 / TS NEXTSTEP</span>
           </div>
 
           <h1 className="hero-title">
@@ -32,7 +58,7 @@ export default function Hero() {
               <span>Learning in public.</span>
             </span>
             <span className="line">
-              <span className="accent">Building what's next.</span>
+              <span>Building what's next.</span>
             </span>
           </h1>
 
@@ -49,15 +75,15 @@ export default function Hero() {
           </ul>
 
           <div className="hero-actions">
-            <button className="btn btn-primary" type="button" onClick={() => scrollTo("work")}>
+            <button className="btn btn-primary" type="button" onClick={() => scrollToId("work")}>
               Explore my work
               <ArrowRight />
             </button>
-            <button className="btn btn-ghost" type="button" onClick={() => scrollTo("resources")}>
+            <button className="btn btn-ghost" type="button" onClick={() => scrollToId("resources")}>
               Open the toolkit
               <ArrowUpRight />
             </button>
-            <button className="hero-text-link" type="button" onClick={() => scrollTo("alli")}>
+            <button className="hero-text-link" type="button" onClick={() => scrollToId("alli")}>
               <CoreIcon />
               See the ALLI thread
             </button>
@@ -80,16 +106,13 @@ export default function Hero() {
         </div>
 
         <div className="hero-portrait">
-          <div className="portrait-stage" aria-hidden="true">
+          <div className="portrait-stage" ref={stageRef} aria-hidden="true">
             <span className="portrait-glow" />
             <span className="orbit-ring ring-a" />
             <span className="orbit-ring ring-b" />
-            <span className="float-label label-1">PYTHON / AI</span>
-            <span className="float-label label-2">TS NEXTSTEP</span>
-            <span className="float-label label-3">MAKE + SHARE</span>
           </div>
 
-          <div className="portrait-frame">
+          <div className="portrait-frame" ref={frameRef}>
             {!imgMissing ? (
               <img
                 key={PORTRAIT_FILES[imgIndex]}
@@ -111,6 +134,12 @@ export default function Hero() {
             )}
           </div>
 
+          <div className="portrait-labels" ref={labelsRef} aria-hidden="true">
+            <span className="float-label label-1">PYTHON / AI</span>
+            <span className="float-label label-2">TS NEXTSTEP</span>
+            <span className="float-label label-3">MAKE + SHARE</span>
+          </div>
+
           <span className="brand-chip">
             <span className="brand-chip-mark" aria-hidden="true">
               TS
@@ -118,7 +147,7 @@ export default function Hero() {
             TS nextstep
           </span>
 
-          <aside className="alli-status" aria-label="ALLI project status summary">
+          <aside className="alli-status liquid" aria-label="ALLI project status summary">
             <header>
               <span className="alli-status-name">ALLI</span>
               <span className="alli-status-version">v0.6 · in development</span>
@@ -147,7 +176,7 @@ export default function Hero() {
         href="#about"
         onClick={(e) => {
           e.preventDefault();
-          scrollTo("about");
+          scrollToId("about");
         }}
         aria-label="Scroll to the about section"
       >

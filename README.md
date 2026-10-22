@@ -1,6 +1,6 @@
 # Tejsai / TS nextstep — Portfolio
 
-Premium dark (black + electric blue / violet) portfolio site for **Tejsai (TS nextstep)** —
+Premium dark (crimson red + black) portfolio site for **Tejsai (TS nextstep)** —
 student, developer, AI builder and content creator. Built with **React + Vite**, fully
 data-driven, mobile-first and accessible.
 
@@ -13,12 +13,11 @@ data-driven, mobile-first and accessible.
   **Planned next** list for v0.7 → v1.0 — future work is never presented as built
 - Video series library: **8 episodes** shown with their **real cover artwork**, each opening a
   platform picker (YouTube / Instagram)
-- **Resources & Digital Toolkit**: a featured, searchable and filterable index of the verified
-  ALLI field notes, plus honest Prompt Library and PDF/download empty states ready for approved
-  public material
+- **Resources & Digital Toolkit**: a featured, searchable and filterable index of verified public
+  material, with prompts shown once in the main library and PDFs/notes kept in a separate download shelf
 - Local-only **Resource Studio** for drag-and-drop files, visual metadata editing, previews,
-  keyboard-accessible reordering, local draft recovery, validated catalog export and optional
-  repository-folder writing through the browser File System Access API
+  keyboard-accessible reordering, local draft recovery, a secure loopback project bridge, validated
+  ZIP recovery export and optional repository-folder writing through the browser File System Access API
 - Journey timeline (education, learning, ALLI, what's next) and a 4-project showcase
 - Contact: email is shown (`mailto:`), social links, and a **Web3Forms** contact form with
   validation and sending/success/error states
@@ -33,7 +32,16 @@ npm run dev          # dev server → http://localhost:5173
 npm run build        # validates resources, then builds dist/
 npm run preview      # serve the production build locally
 npm run studio       # owner-only local Resource Studio → http://127.0.0.1:4174
+npm run local        # bridge + Studio + portfolio preview, opens both browser pages
+npm run local:stop   # stop only the services started by npm run local
 ```
+
+`npm run local` is the normal Windows/WSL workflow. Run it from the repository root in one
+environment only: Windows Node with Windows `node_modules`, or WSL Node with WSL `node_modules`.
+Do not share a `node_modules` folder between those environments. The launcher checks ports 4175
+(bridge), 4174 (Studio) and 5173 (portfolio), refuses to create duplicates, writes service logs
+to `logs/local-dev/`, and opens the two relevant local pages. If a port is already occupied, inspect
+the reported process before stopping anything; the launcher never kills an unrecorded process.
 
 **Opening from disk:** `npm run build` inlines all JS and CSS into a single
 `dist/index.html` (posters are copied to `dist/images/content/`), so you can open that file
@@ -73,9 +81,11 @@ portfolio/
     ├── hooks/                 # useReveal (scroll reveal + scroll-spy), useBodyScrollLock
     ├── lib/                   # contact.js (form submit), asset.js (public/ asset paths)
     └── styles/                # base, navbar-hero, sections, alli, journey, resources,
-                               # contact-footer and upgrade art direction
+                                # contact-footer, upgrade and final V3 art direction
 tools/resource-studio/         # local-only owner UI; never imported by the public app
+tools/local-dev.mjs            # one-click bridge + Studio + portfolio launcher
 scripts/validate-resources.mjs # validates source catalog and generates public manifests
+scripts/verify-public-output.mjs # checks the complete dist/ tree for draft leakage
 ```
 
 ## Your portrait
@@ -145,21 +155,48 @@ tool:
 npm run studio
 ```
 
-Then open `http://127.0.0.1:4174`.
+Then open `http://127.0.0.1:4174` (or use `npm run local`). The local bridge, when running, is
+bound only to `127.0.0.1:4175` and accepts state-changing requests only from the Studio origin.
+It is a narrow resource API, not a general filesystem server.
 
-1. Drop a PDF, prompt file, note or cover image into the Studio.
+1. Drop a PDF, prompt file, note or cover image into the Studio. The bridge only accepts the
+   allowlisted resource folders and loopback Studio origin; it is not a general filesystem API.
 2. Select the new draft and use **Edit Details** to change its display title, description,
    category, tags, cover and visibility. The display title is separate from the real filename.
 3. Use the grip to drag rows, or use **Move Up** / **Move Down** for keyboard-accessible ordering.
-4. Preview the file, then click **Export for Website**. The Studio validates IDs, categories, paths,
-   file types, file references and public visibility before creating a ZIP overlay package.
-5. Review the package, copy it into the repository, run `npm run build`, inspect `dist/`, and use
-   the existing GitHub Pages deployment process. Nothing is published by the Studio itself.
+4. Preview the file, then click **Save Changes** deliberately. The bridge validates the canonical
+   catalog, atomically regenerates both public manifests, writes published files under
+   `public/assets/resources/`, and stores drafts/unpublished files under the ignored
+   `.resource-studio/drafts/` directory. The Vite preview watches these files, so the local portfolio
+   refreshes without a manual validation command.
+5. Use **Export ZIP** as the portable recovery option. Use **Folder recovery** only when the bridge is
+   unavailable. Run `npm run build`, inspect the complete `dist/` tree, and use the existing GitHub
+   Pages deployment process only after explicit approval. Nothing is deployed by the Studio.
 
-The Studio keeps a recoverable draft in browser IndexedDB. This is only a local editing convenience,
-not a publishing backend. **Save to repository** is available on localhost in browsers that support
-the File System Access API; otherwise use the validated ZIP export. Existing files are not deleted
-automatically, and imports download a catalog backup before replacing the local draft.
+The Studio keeps a recoverable draft in browser IndexedDB and the bridge keeps project backups and
+trash entries under `.resource-studio/`. A failed validation leaves the canonical catalog untouched;
+mid-save failures roll back from the operation backup. The bridge serializes saves and rejects
+traversal, symlinked managed files, duplicate staged paths, oversized requests and non-regular files.
+Unpublishing moves the old public file out of `public/`; deleting a resource requires confirmation and
+moves its file into a timestamped trash entry. `npm run validate:resources` also moves stale managed
+public files into recoverable trash instead of silently deleting them. The repeatable resource flow is:
+**Add → Edit → Preview → Save Changes → review local preview → `npm run build` → explicit deployment**.
+
+### Recovery and restart
+
+- Browser-only drafts: open the same Studio origin (`127.0.0.1:4174`) and use the local IndexedDB
+  draft. Switching to `localhost`, opening a built file, or using another port creates a different
+  browser storage origin.
+- Project drafts and deleted files: inspect `.resource-studio/drafts/`, `.resource-studio/backups/` and
+  `.resource-studio/trash/`. These are local runtime data and are ignored by Git. Copy a needed file
+  back through Resource Studio rather than editing generated manifests by hand.
+- If the bridge state is too large, use **Export ZIP**, inspect old recovery entries and remove only
+  unneeded local runtime data. Never delete a backup before confirming the current catalog and build.
+- Restart everything: run `npm run local:stop`, then `npm run local`. If startup reports an occupied
+  port, inspect `logs/local-dev/*.log` and the owning process before stopping it.
+- ZIP recovery: use **Import Package** to load a validated package into the browser draft, then save it
+  deliberately through the bridge. ZIP import is intentionally limited to the Studio's uncompressed,
+  checksum-verified package format.
 
 See `public/assets/resources/README.md` for the resource folder rules and package review checklist.
 
@@ -195,12 +232,17 @@ npm run build
 
 ## Verification
 
-The repository has no checked-in browser test runner, lint script or typecheck script. The
-smallest reproducible production check is:
+The repository has no checked-in browser test runner, lint script or typecheck script. The resource
+smoke checks and production build can be run together with:
 
 ```bash
-npm run build
+npm run verify
 ```
+
+Equivalent individual checks are `npm run test:resources`, `npm run validate:resources`,
+`npm run build`, `npm run studio:build` and `node scripts/verify-public-output.mjs` (the last check
+expects a current `dist/`). `npm run verify` runs the resource tests, bridge lifecycle/security smoke
+tests, the production build and the complete public-output privacy check.
 
 For resource-specific maintenance and manual checks, see
 `public/assets/resources/README.md`. The resource UI uses local catalog data and relative asset

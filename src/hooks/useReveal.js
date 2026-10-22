@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Adds `.is-in` to the element when it enters the viewport.
- * Respects prefers-reduced-motion (reveals immediately).
- * Returns a ref to attach to the target element.
+ * Adds `.is-in` to the element when it enters the viewport, which releases
+ * the CSS entrance in motion.css. Content is revealed immediately without
+ * observation or under reduced motion. Returns a ref to attach to the target.
  */
 export function useReveal(options = {}) {
-  const { threshold = 0.15, rootMargin = "0px 0px -8% 0px", once = true } = options;
+  const { threshold = 0.1, rootMargin = "0px", once = true } = options;
   const ref = useRef(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -14,11 +14,9 @@ export function useReveal(options = {}) {
     const el = ref.current;
     if (!el) return undefined;
 
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    if (reduce || !("IntersectionObserver" in window)) {
+    if (motion.matches || !("IntersectionObserver" in window)) {
       setRevealed(true);
       return undefined;
     }
@@ -38,7 +36,17 @@ export function useReveal(options = {}) {
     );
 
     io.observe(el);
-    return () => io.disconnect();
+    const onMotionChange = () => {
+      if (motion.matches) {
+        setRevealed(true);
+        io.disconnect();
+      }
+    };
+    motion.addEventListener?.("change", onMotionChange);
+    return () => {
+      io.disconnect();
+      motion.removeEventListener?.("change", onMotionChange);
+    };
   }, [threshold, rootMargin, once]);
 
   return [ref, revealed];

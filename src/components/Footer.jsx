@@ -1,13 +1,11 @@
 import { NAV_LINKS, SITE, SOCIAL } from "../data/site";
 import { InstagramIcon, MailIcon, YoutubeIcon } from "./icons";
+import { scrollToId } from "../lib/scroll";
 
 export default function Footer() {
   const go = (e, id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
     e.preventDefault();
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    history.replaceState(null, "", `#${id}`);
+    scrollToId(id);
   };
 
   return (

@@ -143,7 +143,7 @@
 .field textarea:focus {
   outline: none;
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.16);
+  box-shadow: 0 0 0 3px rgba(225, 29, 53, 0.16);
   background: rgba(0, 0, 0, 0.5);
 }
 
@@ -175,7 +175,7 @@
 
 .form-submit.is-success {
   background: linear-gradient(135deg, var(--accent-fill) 0%, var(--accent-fill-deep) 100%);
-  box-shadow: 0 10px 34px rgba(77, 141, 255, 0.4);
+  box-shadow: 0 10px 34px rgba(225, 29, 53, 0.4);
 }
 
 .hp-field {
@@ -233,14 +233,14 @@
 }
 
 .form-status.is-success {
-  background: rgba(46, 204, 113, 0.1);
-  border: 1px solid rgba(46, 204, 113, 0.4);
-  color: #7de8ab;
+  background: rgba(225, 29, 53, 0.1);
+  border: 1px solid rgba(225, 29, 53, 0.4);
+  color: #ffb3bb;
 }
 
 .form-status.is-error {
-  background: rgba(77, 141, 255, 0.1);
-  border: 1px solid rgba(77, 141, 255, 0.45);
+  background: rgba(225, 29, 53, 0.1);
+  border: 1px solid rgba(225, 29, 53, 0.45);
   color: var(--blue-2);
 }
 
@@ -321,7 +321,7 @@
 .footer-social:hover {
   color: #fff;
   border-color: var(--blue);
-  background: rgba(77, 141, 255, 0.16);
+  background: rgba(225, 29, 53, 0.16);
   transform: translateY(-4px);
 }
 

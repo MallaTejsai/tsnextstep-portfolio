@@ -29,9 +29,6 @@ export const NAV_LINKS = [
   { id: "about", label: "ABOUT" },
   { id: "work", label: "WORK" },
   { id: "alli", label: "ALLI" },
-  { id: "journey", label: "JOURNEY" },
-  { id: "skills", label: "SKILLS" },
-  { id: "content", label: "CONTENT" },
   { id: "resources", label: "TOOLKIT" },
   { id: "contact", label: "CONTACT" },
 ];

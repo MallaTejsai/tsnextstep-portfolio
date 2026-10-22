@@ -1,24 +1,22 @@
 import { useRef } from "react";
 import { PROJECTS } from "../data/projects";
+import { ARCHITECTURE_FLOW } from "../data/alliArchitecture";
 import Reveal from "./Reveal";
 import { ArrowUpRight, ArrowRight } from "./icons";
+import { scrollToId } from "../lib/scroll";
+import { useTilt } from "../lib/useTilt";
+import { usePointerLight } from "../lib/usePointerLight";
 
 function ProjectCard({ project, index }) {
   const cardRef = useRef(null);
   const featured = Boolean(project.featured);
-
-  const onMove = (e) => {
-    const el = cardRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    el.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    el.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  };
+  useTilt(cardRef, { max: 7, lift: -8, enabled: featured });
+  usePointerLight(cardRef);
 
   const onInternal = (e, href) => {
     e.preventDefault();
     const id = href.replace("#", "");
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToId(id);
   };
 
   return (
@@ -26,7 +24,6 @@ function ProjectCard({ project, index }) {
       <article
         ref={cardRef}
         className={`project-card${featured ? " project-featured" : ""}`}
-        onMouseMove={onMove}
         data-featured={featured ? "true" : undefined}
       >
         <div className="project-main">
@@ -85,17 +82,14 @@ function ProjectCard({ project, index }) {
 
         {featured ? (
           <div className="project-mini">
-            <div className="mini-flow" aria-label="ALLI request path">
-              <span>USER</span>
-              <i aria-hidden="true">→</i>
-              <span>PYTHON</span>
-              <i aria-hidden="true">→</i>
-              <span>ALLI</span>
-              <i aria-hidden="true">→</i>
-              <span>OLLAMA</span>
-              <i aria-hidden="true">→</i>
-              <span>QWEN</span>
-            </div>
+            <ol className="mini-flow" aria-label="ALLI request path">
+              {ARCHITECTURE_FLOW.map((node) => (
+                <li key={node.id}>
+                  <span>{node.label}</span>
+                  <small>{node.role}</small>
+                </li>
+              ))}
+            </ol>
             <p className="mini-flow-note">
               Local request path of the assistant — visualized in full inside the ALLI section.
             </p>
@@ -115,7 +109,7 @@ export default function Work() {
         <Reveal className="section-head">
           <span className="eyebrow">What I'm building</span>
           <h2 className="section-title" id="work-title">
-            Projects in <span className="accent">motion</span>
+            Projects in motion
           </h2>
           <p className="section-lead">
             A snapshot of what I'm actively building and learning from. ALLI is the flagship —

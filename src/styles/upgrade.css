@@ -5,25 +5,25 @@
    ============================================================ */
 
 :root {
-  --bg: #07080b;
-  --bg-2: #0b0d12;
-  --bg-3: #10131a;
-  --panel: #0d1016;
-  --panel-2: #151a24;
-  --line: rgba(234, 239, 255, 0.1);
-  --line-strong: rgba(234, 239, 255, 0.19);
-  --text: #f4f2ed;
-  --text-2: #aeb3c1;
-  --text-3: #737987;
-  --blue: #6ca4ff;
-  --blue-2: #b7d0ff;
-  --violet: #a98bff;
-  --violet-deep: #674fe8;
-  --cyan: #53d7e9;
-  --accent-fill: #477fea;
-  --accent-fill-deep: #634ee0;
-  --accent-soft: rgba(108, 164, 255, 0.12);
-  --glow: rgba(108, 164, 255, 0.45);
+  --bg: #08090b;
+  --bg-2: #0d0e12;
+  --bg-3: #15161b;
+  --panel: #111216;
+  --panel-2: #18191f;
+  --line: rgba(245, 245, 247, 0.1);
+  --line-strong: rgba(245, 245, 247, 0.19);
+  --text: #f5f5f7;
+  --text-2: #a5a7b0;
+  --text-3: #747680;
+  --blue: #e11d35;
+  --blue-2: #ff7d8b;
+  --violet: #ff3048;
+  --violet-deep: #a90f24;
+  --cyan: #ff3048;
+  --accent-fill: #c91830;
+  --accent-fill-deep: #8e1223;
+  --accent-soft: rgba(225, 29, 53, 0.12);
+  --glow: rgba(225, 29, 53, 0.42);
   --container: 1320px;
   --nav-h: 78px;
   --radius: 16px;
@@ -33,8 +33,8 @@
 
 body {
   background:
-    radial-gradient(1100px 640px at 85% -12%, rgba(77, 101, 176, 0.13), transparent 68%),
-    radial-gradient(920px 560px at -12% 38%, rgba(89, 54, 171, 0.08), transparent 70%),
+    radial-gradient(1100px 640px at 85% -12%, rgba(225, 29, 53, 0.1), transparent 68%),
+    radial-gradient(920px 560px at -12% 38%, rgba(137, 13, 32, 0.08), transparent 70%),
     var(--bg);
 }
 
@@ -112,11 +112,11 @@ main,
 
 .btn-primary {
   background: linear-gradient(130deg, var(--accent-fill), var(--accent-fill-deep));
-  box-shadow: 0 14px 34px rgba(71, 127, 234, 0.24);
+  box-shadow: 0 14px 34px rgba(225, 29, 53, 0.24);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 18px 46px rgba(71, 127, 234, 0.36);
+  box-shadow: 0 18px 46px rgba(225, 29, 53, 0.36);
 }
 
 .btn-ghost {
@@ -125,7 +125,7 @@ main,
 }
 
 .btn-ghost:hover {
-  background: rgba(108, 164, 255, 0.08);
+  background: rgba(225, 29, 53, 0.08);
 }
 
 /* ---------- navigation ---------- */
@@ -153,8 +153,8 @@ main,
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(145deg, #6ca4ff 0%, #6649e8 100%);
-  box-shadow: 0 7px 22px rgba(71, 127, 234, 0.34);
+  background: linear-gradient(145deg, #ff3048 0%, #a90f24 100%);
+  box-shadow: 0 7px 22px rgba(225, 29, 53, 0.34);
 }
 
 .brand-name {
@@ -194,7 +194,7 @@ main,
   height: 70%;
   content: "";
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(108, 164, 255, 0.035), transparent);
+  background: linear-gradient(90deg, transparent, rgba(225, 29, 53, 0.035), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent);
 }
 
@@ -218,9 +218,9 @@ main,
 
 .hero-badge {
   padding: 0.42rem 0.7rem;
-  border: 1px solid rgba(108, 164, 255, 0.32);
+  border: 1px solid rgba(225, 29, 53, 0.32);
   border-radius: 7px;
-  background: rgba(108, 164, 255, 0.08);
+  background: rgba(225, 29, 53, 0.08);
   font-size: 0.62rem;
   letter-spacing: 0.2em;
 }
@@ -352,26 +352,26 @@ main,
 }
 
 .portrait-glow {
-  background: radial-gradient(circle at 50% 40%, rgba(108, 164, 255, 0.35), rgba(169, 139, 255, 0.12) 46%, transparent 73%);
+  background: radial-gradient(circle at 50% 40%, rgba(225, 29, 53, 0.28), rgba(137, 13, 32, 0.12) 46%, transparent 73%);
 }
 
 .orbit-ring {
-  border-color: rgba(183, 208, 255, 0.22);
+  border-color: rgba(255, 125, 139, 0.22);
 }
 
 .ring-a {
   border-style: solid;
-  border-color: rgba(83, 215, 233, 0.18);
+  border-color: rgba(255, 48, 72, 0.18);
 }
 
 .ring-b {
-  border-color: rgba(169, 139, 255, 0.25);
+  border-color: rgba(255, 125, 139, 0.25);
 }
 
 .portrait-frame {
   border-radius: 24px 24px 9px 24px;
-  border-color: rgba(183, 208, 255, 0.32);
-  box-shadow: 0 0 0 1px rgba(108, 164, 255, 0.06), 0 38px 90px rgba(0, 0, 0, 0.56);
+  border-color: rgba(255, 125, 139, 0.32);
+  box-shadow: 0 0 0 1px rgba(225, 29, 53, 0.06), 0 38px 90px rgba(0, 0, 0, 0.56);
 }
 
 .portrait-frame::before {
@@ -388,14 +388,14 @@ main,
   top: 0.2rem;
   right: -1.25rem;
   border-radius: 8px;
-  border-color: rgba(183, 208, 255, 0.25);
+  border-color: rgba(255, 125, 139, 0.25);
 }
 
 .alli-status {
   left: -2rem;
   bottom: 0.2rem;
   border-radius: 12px;
-  border-color: rgba(183, 208, 255, 0.24);
+  border-color: rgba(255, 125, 139, 0.24);
 }
 
 .hero-scroll {
@@ -457,14 +457,14 @@ main,
 
 .fact:hover {
   transform: translateX(8px);
-  border-color: rgba(108, 164, 255, 0.45);
-  background: rgba(108, 164, 255, 0.045);
+  border-color: rgba(225, 29, 53, 0.45);
+  background: rgba(225, 29, 53, 0.045);
 }
 
 .fact-icon {
   border-radius: 10px;
-  background: rgba(108, 164, 255, 0.1);
-  border-color: rgba(108, 164, 255, 0.28);
+  background: rgba(225, 29, 53, 0.1);
+  border-color: rgba(225, 29, 53, 0.28);
   color: var(--blue-2);
 }
 
@@ -498,11 +498,11 @@ main,
 
 .project-featured {
   padding: clamp(1.8rem, 4vw, 3.4rem);
-  border-color: rgba(108, 164, 255, 0.34);
+  border-color: rgba(225, 29, 53, 0.34);
   background:
-    radial-gradient(70% 120% at 100% 0%, rgba(169, 139, 255, 0.15), transparent 74%),
-    radial-gradient(70% 100% at 0% 100%, rgba(83, 215, 233, 0.08), transparent 72%),
-    linear-gradient(155deg, #131823, #0b0e14 68%);
+    radial-gradient(70% 120% at 100% 0%, rgba(225, 29, 53, 0.15), transparent 74%),
+    radial-gradient(70% 100% at 0% 100%, rgba(137, 13, 32, 0.08), transparent 72%),
+    linear-gradient(155deg, #171116, #0b0d11 68%);
 }
 
 .project-index {
@@ -559,7 +559,7 @@ main,
 
 .skill-group:hover {
   transform: translateY(-7px);
-  border-color: rgba(108, 164, 255, 0.42);
+  border-color: rgba(225, 29, 53, 0.42);
 }
 
 .skill-group h3 {
@@ -590,7 +590,7 @@ main,
 }
 
 .jt::before {
-  background: linear-gradient(180deg, rgba(83, 215, 233, 0.58), rgba(108, 164, 255, 0.32) 56%, transparent);
+  background: linear-gradient(180deg, rgba(255, 48, 72, 0.58), rgba(225, 29, 53, 0.32) 56%, transparent);
 }
 
 .jt-card,
@@ -632,7 +632,7 @@ main,
 
 .poster-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(108, 164, 255, 0.5);
+  border-color: rgba(225, 29, 53, 0.5);
 }
 
 .poster-body {
@@ -684,7 +684,7 @@ main,
 .field input:focus,
 .field textarea:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(108, 164, 255, 0.13);
+  box-shadow: 0 0 0 3px rgba(225, 29, 53, 0.13);
 }
 
 .social-btn:hover {

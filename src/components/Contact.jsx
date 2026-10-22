@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { isContactConfigured, sendContactMessage } from "../lib/contact";
+import { usePointerLight } from "../lib/usePointerLight";
 import { SITE, SOCIAL } from "../data/site";
 import Reveal from "./Reveal";
 import {
@@ -33,6 +34,7 @@ export default function Contact() {
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
   const formRef = useRef(null);
+  usePointerLight(formRef);
 
   const validate = (v) => {
     const next = {};
@@ -162,7 +164,7 @@ export default function Contact() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <form className="contact-form" ref={formRef} onSubmit={onSubmit} noValidate>
+            <form className="contact-form liquid" ref={formRef} onSubmit={onSubmit} noValidate>
               <div className="form-row">
                 <div className={`field${errors.name ? " has-error" : ""}`} style={{ "--field-delay": "0.12s" }}>
                   <label htmlFor="contact-name">Name</label>
@@ -171,6 +173,7 @@ export default function Contact() {
                     name="name"
                     type="text"
                     autoComplete="name"
+                    required
                     placeholder="Your name"
                     value={values.name}
                     onChange={onChange}
@@ -191,6 +194,7 @@ export default function Contact() {
                     name="email"
                     type="email"
                     autoComplete="email"
+                    required
                     placeholder="you@example.com"
                     value={values.email}
                     onChange={onChange}
@@ -210,6 +214,7 @@ export default function Contact() {
                 <textarea
                   id="contact-message"
                   name="message"
+                  required
                   placeholder="Tell me what's on your mind..."
                   value={values.message}
                   onChange={onChange}

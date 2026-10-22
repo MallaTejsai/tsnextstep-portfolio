@@ -64,7 +64,7 @@
 }
 
 .fact:hover {
-  border-color: rgba(77, 141, 255, 0.4);
+  border-color: rgba(225, 29, 53, 0.4);
   transform: translateX(6px);
 }
 
@@ -76,7 +76,7 @@
   border-radius: 12px;
   background: var(--accent-soft);
   color: var(--blue-2);
-  border: 1px solid rgba(77, 141, 255, 0.25);
+  border: 1px solid rgba(225, 29, 53, 0.25);
 }
 
 .fact-icon svg {
@@ -139,7 +139,7 @@
   inset: 0;
   background: radial-gradient(
     600px 260px at var(--mx, 50%) var(--my, 0%),
-    rgba(77, 141, 255, 0.12),
+    rgba(225, 29, 53, 0.12),
     transparent 70%
   );
   opacity: 0;
@@ -148,7 +148,7 @@
 }
 
 .project-card:hover {
-  border-color: rgba(77, 141, 255, 0.45);
+  border-color: rgba(225, 29, 53, 0.45);
   transform: translateY(-6px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
@@ -166,10 +166,10 @@
   margin-top: 0.2rem;
   padding: clamp(1.8rem, 4vw, 3rem);
   background:
-    radial-gradient(700px 320px at 85% 0%, rgba(155, 107, 255, 0.16), transparent 68%),
-    radial-gradient(560px 300px at 0% 100%, rgba(77, 141, 255, 0.14), transparent 66%),
-    linear-gradient(150deg, #12151e 0%, #0b0c12 60%, #08080c 100%);
-  border-color: rgba(77, 141, 255, 0.32);
+    radial-gradient(700px 320px at 85% 0%, rgba(225, 29, 53, 0.16), transparent 68%),
+    radial-gradient(560px 300px at 0% 100%, rgba(137, 13, 32, 0.14), transparent 66%),
+    linear-gradient(150deg, #171116 0%, #0b0d11 60%, #08090b 100%);
+  border-color: rgba(225, 29, 53, 0.32);
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
   gap: clamp(1.4rem, 3vw, 2.6rem);
@@ -182,7 +182,7 @@
 
 .project-featured .project-mini {
   border-radius: var(--radius);
-  border: 1px solid rgba(143, 180, 255, 0.22);
+  border: 1px solid rgba(255, 125, 139, 0.22);
   background: rgba(6, 7, 10, 0.6);
   padding: 1.1rem 1.15rem;
 }
@@ -325,7 +325,7 @@
 }
 
 .skill-group:hover {
-  border-color: rgba(77, 141, 255, 0.42);
+  border-color: rgba(225, 29, 53, 0.42);
   transform: translateY(-6px);
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.4);
 }
@@ -427,7 +427,7 @@
   font-family: var(--font-display);
   font-size: 0.78rem;
   font-weight: 700;
-  box-shadow: 0 8px 22px rgba(47, 109, 240, 0.35);
+  box-shadow: 0 8px 22px rgba(225, 29, 53, 0.2);
 }
 
 .content-brand span:last-child {
@@ -492,7 +492,7 @@
 }
 
 .poster-card:hover {
-  border-color: rgba(77, 141, 255, 0.5);
+  border-color: rgba(225, 29, 53, 0.5);
   transform: translateY(-6px);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
 }
@@ -572,7 +572,7 @@
 
 .poster-platform.ig {
   color: var(--blue-2);
-  border-color: rgba(143, 180, 255, 0.35);
+  border-color: rgba(255, 125, 139, 0.35);
 }
 
 .poster-open {
@@ -587,7 +587,7 @@
   place-items: center;
   border-radius: 50%;
   background: rgba(10, 12, 18, 0.72);
-  border: 1px solid rgba(143, 180, 255, 0.5);
+  border: 1px solid rgba(255, 125, 139, 0.5);
   color: #fff;
   opacity: 0;
   transform: scale(0.85);
@@ -601,7 +601,7 @@
 }
 
 .poster-card:hover .poster-open,
-.poster-hit:focus-visible ~ .poster-open {
+.poster-card:focus-within .poster-open {
   opacity: 1;
   transform: scale(1);
   background: var(--accent-fill);
@@ -683,7 +683,7 @@
 }
 
 .pillar:hover {
-  border-color: rgba(77, 141, 255, 0.4);
+  border-color: rgba(225, 29, 53, 0.4);
   transform: translateY(-3px);
 }
 
@@ -696,7 +696,7 @@
   border-radius: 10px;
   background: var(--accent-soft);
   color: var(--blue-2);
-  border: 1px solid rgba(77, 141, 255, 0.22);
+  border: 1px solid rgba(225, 29, 53, 0.22);
 }
 
 .pillar-icon svg {

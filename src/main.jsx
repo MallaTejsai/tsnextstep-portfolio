@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "./App";
+import { prefersReducedMotion } from "./lib/scroll";
 
 import "./styles/base.css";
 import "./styles/navbar-hero.css";
@@ -10,6 +11,9 @@ import "./styles/alli.css";
 import "./styles/journey.css";
 import "./styles/contact-footer.css";
 import "./styles/upgrade.css";
+import "./styles/resources.css";
+import "./styles/v3.css";
+import "./styles/motion.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -22,5 +26,5 @@ window.addEventListener("load", () => {
   const id = window.location.hash.replace("#", "");
   if (!id) return;
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ block: "start" });
+  if (el) el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
 });
