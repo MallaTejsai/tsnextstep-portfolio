@@ -227,8 +227,12 @@ npm run build
 ```
 
 - **Netlify / Vercel / Cloudflare Pages**: build command `npm run build`, output dir `dist`
-- **GitHub Pages**: push the repo, run the build in CI and publish `dist/`
-  (for a project site served from a subpath the relative base already handles asset URLs)
+- **GitHub Pages**: the `.github/workflows/deploy-pages.yml` workflow runs on every push to `main`,
+  installs with `npm ci`, builds from source, runs `scripts/verify-public-output.mjs` plus a guard
+  that rejects any private Resource Studio output in `dist/`, then deploys `dist/` with
+  `actions/deploy-pages`. Repository setting: **Settings → Pages → Source → GitHub Actions**.
+  The site publishes at `https://mallatejsai.github.io/tsnextstep-portfolio/` and the relative base
+  handles the project subpath. Only committed records are ever built; drafts stay local.
 
 ## Verification
 
