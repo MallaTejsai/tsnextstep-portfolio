@@ -276,8 +276,37 @@
       "youtubeUrl": "https://youtube.com/shorts/c1ZBx9hK4CE?si=67POD7cZedQfA_V0",
       "instagramUrl": "https://www.instagram.com/reel/DdhOFpVhjlO/?stkn=bGd0MXRydTA3aTZr",
       "viewPath": null
+    },
+    {
+      "id": "resource-studio-publish-check",
+      "kind": "note",
+      "type": "note",
+      "source": "resource-studio",
+      "series": "TS nextstep resource",
+      "number": null,
+      "title": "Resource Studio publish check",
+      "description": "Harmless pipeline verification note published from Resource Studio; safe to delete.",
+      "categoryId": "guides",
+      "category": "Guides & Tutorials",
+      "tags": [
+        "publish-check"
+      ],
+      "filePath": "assets/resources/notes/resource-studio-publish-check.txt",
+      "originalFileName": "resource-studio-publish-check.txt",
+      "cover": null,
+      "fileSize": 507,
+      "mimeType": "text/plain",
+      "promptText": null,
+      "featured": false,
+      "published": true,
+      "displayOrder": 9,
+      "youtubeUrl": null,
+      "instagramUrl": null,
+      "viewPath": null
     }
   ],
   "prompts": [],
-  "downloads": []
+  "downloads": [
+    "resource-studio-publish-check"
+  ]
 }

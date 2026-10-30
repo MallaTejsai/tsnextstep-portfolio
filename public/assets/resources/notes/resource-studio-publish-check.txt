@@ -1,0 +1,13 @@
+Resource Studio publish verification
+====================================
+
+This harmless note was added through Resource Studio and published with the
+one-click "Publish to Live Website" action to prove the pipeline end to end:
+
+  Studio upload -> local catalog and manifests -> exact staged commit
+  -> push to main -> GitHub Actions build -> live GitHub Pages site
+
+It contains no private data. To remove it, delete this resource in Resource
+Studio and publish again.
+
+Generated: 2026-10-30T16:32:18.722Z
