@@ -15,7 +15,10 @@ import {
   resourcePathKey,
   toPublicCatalog,
   validateCatalog,
+  withDisplayOrder,
 } from "../../src/lib/resourceValidation.js";
+
+import { getPublishStatus, publishRepository } from "./publish.mjs";
 
 export const DEFAULT_BRIDGE_PORT = 4175;
 export const STUDIO_ORIGIN = "http://127.0.0.1:4174";
@@ -26,6 +29,10 @@ const PUBLIC_MANIFEST_RELATIVE_PATH = "public/assets/resources/resources.json";
 const MANAGED_RESOURCE_ROOT = "public/assets/resources";
 const PRIVATE_ROOT = ".resource-studio";
 const DRAFT_ROOT = `${PRIVATE_ROOT}/drafts`;
+// Unpublished records live in this git-ignored file, never in the tracked
+// canonical catalog, so a publish commit can never carry a private draft to a
+// public repository. The Studio still sees both merged into one catalog.
+const DRAFT_CATALOG_RELATIVE_PATH = `${PRIVATE_ROOT}/draft-catalog.json`;
 const BACKUP_ROOT = `${PRIVATE_ROOT}/backups`;
 const TRASH_ROOT = `${PRIVATE_ROOT}/trash`;
 const MAX_BODY_BYTES = 64 * 1024 * 1024;
@@ -43,6 +50,37 @@ function jsonBytes(value) {
 
 function catalogRevision(catalog) {
   return crypto.createHash("sha256").update(JSON.stringify(normalizeCatalog(catalog))).digest("hex");
+}
+
+async function readDraftCatalog(root) {
+  const value = await readJson(resolveRepositoryPath(root, DRAFT_CATALOG_RELATIVE_PATH), { resources: [] });
+  if (!value || typeof value !== "object" || !Array.isArray(value.resources)) return { resources: [] };
+  return value;
+}
+
+// Split the merged authoring catalog: published records are written to the
+// tracked canonical catalog, drafts to the private git-ignored catalog. Each
+// part keeps a contiguous display order of its own; mergeDrafts puts them back
+// together so the Studio never sees the split.
+function splitCatalog(catalog) {
+  const publishedResources = [];
+  const draftResources = [];
+  for (const resource of catalog.resources) (resource.published ? publishedResources : draftResources).push(resource);
+  return {
+    canonical: { ...catalog, resources: withDisplayOrder(publishedResources) },
+    drafts: { ...catalog, resources: withDisplayOrder(draftResources) },
+  };
+}
+
+function mergeDrafts(canonical, draftCatalog) {
+  const drafts = Array.isArray(draftCatalog?.resources) ? draftCatalog.resources : [];
+  if (!drafts.length) return normalizeCatalog(canonical);
+  const base = canonical.resources.length;
+  const resources = [
+    ...canonical.resources,
+    ...drafts.map((resource, index) => ({ ...resource, displayOrder: base + index + 1 })),
+  ];
+  return normalizeCatalog({ ...canonical, resources });
 }
 
 function relativePathForLog(value) {
@@ -259,12 +297,13 @@ async function assertRepositoryShape(root) {
 async function readCurrentCatalog(root) {
   const catalogPath = resolveRepositoryPath(root, CATALOG_RELATIVE_PATH);
   await assertRegularFile(catalogPath, CATALOG_RELATIVE_PATH);
-  return normalizeCatalog(await readJson(catalogPath, { resources: [] }));
+  const canonical = normalizeCatalog(await readJson(catalogPath, { resources: [] }));
+  return mergeDrafts(canonical, await readDraftCatalog(root));
 }
 
 async function snapshot(root, directory) {
   await ensureDirectory(directory);
-  const metadata = [CATALOG_RELATIVE_PATH, PUBLIC_CATALOG_RELATIVE_PATH, PUBLIC_MANIFEST_RELATIVE_PATH];
+  const metadata = [CATALOG_RELATIVE_PATH, PUBLIC_CATALOG_RELATIVE_PATH, PUBLIC_MANIFEST_RELATIVE_PATH, DRAFT_CATALOG_RELATIVE_PATH];
   for (const relativePath of metadata) {
     const source = resolveRepositoryPath(root, relativePath);
     if (await pathExists(source)) await writeAtomic(path.join(directory, relativePath), await fsp.readFile(source));
@@ -278,7 +317,7 @@ async function snapshot(root, directory) {
 }
 
 async function restoreSnapshot(root, directory) {
-  for (const relativePath of [CATALOG_RELATIVE_PATH, PUBLIC_CATALOG_RELATIVE_PATH, PUBLIC_MANIFEST_RELATIVE_PATH]) {
+  for (const relativePath of [CATALOG_RELATIVE_PATH, PUBLIC_CATALOG_RELATIVE_PATH, PUBLIC_MANIFEST_RELATIVE_PATH, DRAFT_CATALOG_RELATIVE_PATH]) {
     const source = path.join(directory, relativePath);
     if (await pathExists(source)) await writeAtomic(resolveRepositoryPath(root, relativePath), await fsp.readFile(source));
     else {
@@ -291,7 +330,7 @@ async function restoreSnapshot(root, directory) {
   const savedFiles = await listFiles(directory);
   for (const source of savedFiles) {
     const relativePath = path.relative(directory, source).replaceAll(path.sep, "/");
-    if (relativePath === CATALOG_RELATIVE_PATH || relativePath === PUBLIC_CATALOG_RELATIVE_PATH || relativePath === PUBLIC_MANIFEST_RELATIVE_PATH) continue;
+    if (relativePath === CATALOG_RELATIVE_PATH || relativePath === PUBLIC_CATALOG_RELATIVE_PATH || relativePath === PUBLIC_MANIFEST_RELATIVE_PATH || relativePath === DRAFT_CATALOG_RELATIVE_PATH) continue;
     const destination = relativePath.startsWith("public/")
       ? resolveRepositoryPath(root, relativePath)
       : resolveRepositoryPath(root, `${DRAFT_ROOT}/${relativePath.slice("drafts/".length)}`);
@@ -449,7 +488,9 @@ async function commitProject(root, body, testOnlyAfterWrite) {
     // Constructor-injected fault hook only; request bodies cannot enable it.
     await testOnlyAfterWrite?.({ phase: "after-assets" });
     const publicCatalog = toPublicCatalog(candidate);
-    await writeAtomic(resolveRepositoryPath(root, CATALOG_RELATIVE_PATH), jsonBytes(candidate));
+    const { canonical, drafts } = splitCatalog(candidate);
+    await writeAtomic(resolveRepositoryPath(root, CATALOG_RELATIVE_PATH), jsonBytes(canonical));
+    await writeAtomic(resolveRepositoryPath(root, DRAFT_CATALOG_RELATIVE_PATH), jsonBytes(drafts));
     await writeAtomic(resolveRepositoryPath(root, PUBLIC_CATALOG_RELATIVE_PATH), jsonBytes(publicCatalog));
     await writeAtomic(resolveRepositoryPath(root, PUBLIC_MANIFEST_RELATIVE_PATH), jsonBytes(publicCatalog));
     await testOnlyAfterWrite?.({ phase: "after-manifests" });
@@ -487,6 +528,20 @@ async function commitProject(root, body, testOnlyAfterWrite) {
     await fsp.rm(stagingDirectory, { recursive: true, force: true });
     throw error;
   }
+}
+
+// Publish to the live website: only the approved paths leave this machine,
+// and only after the local public-output gate and the private-data review pass.
+async function publishProject(root, body) {
+  const catalog = await readCurrentCatalog(root);
+  const revision = catalogRevision(catalog);
+  if (body && Object.hasOwn(body, "expectedRevision") && body.expectedRevision !== revision) {
+    const error = new Error("The project changed since it was last saved. Save to local project, then publish again.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const draftCatalog = await readDraftCatalog(root);
+  return publishRepository({ root, catalog, draftResources: draftCatalog.resources || [] });
 }
 
 async function readProjectState(root) {
@@ -612,6 +667,11 @@ export function createBridgeServer({ root, port = DEFAULT_BRIDGE_PORT, origin = 
       } else if (request.url === "/api/commit" && request.method === "POST") {
         const body = await readBody(request);
         sendJson(response, 200, { ok: true, ...(await enqueue(() => commitProject(repositoryRoot, body, testOnlyAfterWrite))) }, origin);
+      } else if (request.url === "/api/publish" && request.method === "POST") {
+        const body = await readBody(request);
+        sendJson(response, 200, { ok: true, ...(await enqueue(() => publishProject(repositoryRoot, body))) }, origin);
+      } else if (request.url === "/api/publish/status" && request.method === "GET") {
+        sendJson(response, 200, getPublishStatus(), origin);
       } else {
         sendJson(response, 404, { error: "Unknown bridge operation." }, origin);
       }

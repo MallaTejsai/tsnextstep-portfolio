@@ -461,6 +461,8 @@ export default function ResourceStudio() {
   const [bridgeStatus, setBridgeStatus] = useState("checking");
   const [saveStatus, setSaveStatus] = useState("idle");
   const [replacementFile, setReplacementFile] = useState(null);
+  const [publishing, setPublishing] = useState(null);
+  const [confirmPublish, setConfirmPublish] = useState(false);
   const fileInputRef = useRef(null);
   const importInputRef = useRef(null);
   const bridgeTokenRef = useRef(null);
@@ -483,10 +485,11 @@ export default function ResourceStudio() {
     return () => window.removeEventListener("beforeunload", warnBeforeLeave);
   }, [editorIsDirty, saveStatus]);
 
-  const showNotice = useCallback((type, text) => {
-    setNotice({ type, text });
+  const showNotice = useCallback((type, text, link = null) => {
+    setNotice({ type, text, link });
     window.clearTimeout(showNotice.timer);
-    if (type === "success") showNotice.timer = window.setTimeout(() => setNotice(null), 7000);
+    // A notice that carries a live link stays until the owner dismisses it.
+    if (type === "success" && !link) showNotice.timer = window.setTimeout(() => setNotice(null), 7000);
   }, []);
 
   const bridgeRequest = useCallback(async (endpoint, options = {}) => {
@@ -499,7 +502,9 @@ export default function ResourceStudio() {
     }
     const request = (currentToken) => fetch(`${BRIDGE_URL}${endpoint}`, {
       ...options,
-      signal: AbortSignal.timeout(60000),
+      // Publish runs a local build before it pushes, so it may take longer than
+      // a normal save; callers can pass their own timeout.
+      signal: options.signal || AbortSignal.timeout(60000),
       headers: { Accept: "application/json", ...(options.body ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${currentToken}`, ...(options.headers || {}) },
     });
     let response = await request(token);
@@ -1000,6 +1005,58 @@ export default function ResourceStudio() {
     void syncBridge(catalog, files);
   }, [catalog, files, syncBridge]);
 
+  const publishedCount = catalog.resources.filter((resource) => resource.published).length;
+  const draftCount = catalog.resources.length - publishedCount;
+
+  /**
+   * Publish to Live Website: save → validate → build → stage the approved
+   * files only → commit → push → watch GitHub Actions → verify the live site.
+   * Drafts are never part of the commit; the confirmation states the counts.
+   */
+  const publishToLive = useCallback(async () => {
+    setConfirmPublish(false);
+    if (bridgeStatus !== "connected") {
+      showNotice("warning", "The project bridge is not connected, so nothing can be published. Start TS nextstep — Start All, then try again.");
+      return;
+    }
+    setPublishing({ state: "saving", message: "Saving to the local project…" });
+    try {
+      const saved = await syncBridge(catalog, files);
+      if (!saved) {
+        setPublishing(null);
+        return; // syncBridge already reported the save failure and kept the draft
+      }
+      setPublishing({ state: "preparing", message: "Validating resources and building the public output…" });
+      const result = await bridgeRequest("/api/publish", {
+        method: "POST",
+        body: JSON.stringify({ expectedRevision: saved.revision }),
+        signal: AbortSignal.timeout(300000),
+      });
+      setPublishing({ state: "pushing", message: "Committed and pushed to main. Watching the GitHub Actions deployment…", link: result.runUrl });
+
+      const deadline = Date.now() + 25 * 60 * 1000;
+      let last = null;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        last = await bridgeRequest("/api/publish/status");
+        setPublishing({ state: last.state, message: last.message, link: last.runUrl || last.liveUrl || null });
+        if (last.done) break;
+      }
+
+      setPublishing(null);
+      if (last?.done && last.ok) {
+        showNotice("success", last.message, last.liveUrl || result.liveUrl);
+      } else if (last?.done) {
+        showNotice("error", last.message, last.runUrl || last.liveUrl || result.commitUrl);
+      } else {
+        showNotice("warning", "The Studio stopped watching this deployment. Open the GitHub Actions run to follow it.", result.runUrl);
+      }
+    } catch (error) {
+      setPublishing(null);
+      showNotice("error", error.message || "The publish could not be completed. Nothing was pushed.");
+    }
+  }, [bridgeRequest, bridgeStatus, catalog, files, showNotice, syncBridge]);
+
   const previewIndex = previewResource ? catalog.resources.findIndex((resource) => resource.id === previewResource.id) : -1;
 
   return (
@@ -1024,7 +1081,7 @@ export default function ResourceStudio() {
       <main className="studio-main">
         <FirstUseGuide />
 
-        {notice ? <div className={`studio-notice studio-notice-${notice.type}`} role={notice.type === "error" ? "alert" : "status"}><span>{notice.type === "success" ? <Icon name="check" /> : notice.type === "error" ? <Icon name="close" /> : <Icon name="eye" />}</span><p>{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss message"><Icon name="close" /></button></div> : null}
+        {notice ? <div className={`studio-notice studio-notice-${notice.type}`} role={notice.type === "error" ? "alert" : "status"}><span>{notice.type === "success" ? <Icon name="check" /> : notice.type === "error" ? <Icon name="close" /> : <Icon name="eye" />}</span><p>{notice.text}{notice.link ? <> <a href={notice.link} target="_blank" rel="noreferrer">{notice.link}</a></> : null}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss message"><Icon name="close" /></button></div> : null}
 
         <section className="studio-upload-layout" aria-labelledby="upload-title">
           <div className={`studio-dropzone${dragActive ? " is-dragging" : ""}`} onDragEnter={(event) => { event.preventDefault(); setDragActive(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragActive(false); }} onDrop={onDropFiles}>
@@ -1076,9 +1133,12 @@ export default function ResourceStudio() {
         </section>
 
         <section className="studio-publish-panel">
-          <div><span className="studio-kicker">Local project bridge</span><h2>Save deliberately.</h2><p>The local bridge validates the canonical catalog, keeps drafts outside public/, regenerates both manifests and refreshes Vite. It never pushes, commits or claims that your site is live.</p></div>
-          <div className="studio-publish-actions"><button className="studio-button studio-button-primary" type="button" onClick={saveToLocalProject}><Icon name="check" /> Save to local project</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void saveToRepository()} disabled={!window.showDirectoryPicker}><Icon name="folder" /> Folder recovery</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export ZIP</button></div>
-          <p className="studio-publish-note">{bridgeStatus === "connected" ? "Published changes are local and Vite watches the project; deploy only with an explicit build and GitHub Pages action." : "Start npm run local to connect the bridge. Browser drafts and ZIP export remain available without it."}</p>
+          <div><span className="studio-kicker">Local project bridge</span><h2>Save deliberately. Publish on purpose.</h2><p>The local bridge validates the canonical catalog, keeps drafts outside public/, regenerates both manifests and refreshes Vite. Save never pushes. <strong>Publish to Live Website</strong> is the separate deliberate step: it runs the production gate, stages only the approved resource files, catalog and manifests, commits, pushes to main and then watches the GitHub Actions deployment until the live site serves the new resource.</p></div>
+          <div className="studio-publish-actions">
+            {confirmPublish ? <><button className="studio-button studio-button-primary" type="button" onClick={() => void publishToLive()} disabled={Boolean(publishing)}><Icon name="upload" /> Confirm publish of {publishedCount} resource{publishedCount === 1 ? "" : "s"}</button><button className="studio-button studio-button-secondary" type="button" onClick={() => setConfirmPublish(false)}>Cancel</button></> : <button className="studio-button studio-button-primary" type="button" onClick={() => setConfirmPublish(true)} disabled={Boolean(publishing) || bridgeStatus !== "connected"}><Icon name="upload" /> Publish to Live Website</button>}
+            <button className="studio-button studio-button-secondary" type="button" onClick={saveToLocalProject} disabled={Boolean(publishing)}><Icon name="check" /> Save to local project</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void saveToRepository()} disabled={!window.showDirectoryPicker}><Icon name="folder" /> Folder recovery</button><button className="studio-button studio-button-secondary" type="button" onClick={() => void exportPackage()}><Icon name="download" /> Export ZIP</button>
+          </div>
+          <p className="studio-publish-note">{publishing ? publishing.message : confirmPublish ? `Confirm to commit and push ${publishedCount} published resource${publishedCount === 1 ? "" : "s"} to the live website. ${draftCount} draft${draftCount === 1 ? "" : "s"} stay private and are never committed.` : bridgeStatus === "connected" ? "Publishing updates only the approved public files, then follows the GitHub Actions deployment to the live site. Drafts stay on this machine." : "Start npm run local to connect the bridge. Browser drafts and ZIP export remain available without it."}</p>
         </section>
       </main>
 

@@ -36,6 +36,19 @@ const write = async (relative, value) => fsp.writeFile(path.join(ROOT, relative)
 const CATALOG = "src/data/resourceCatalog.json";
 const PUBLIC_CATALOG = "src/data/resourceCatalog.public.json";
 const MANIFEST = "public/assets/resources/resources.json";
+// Unpublished records live in this git-ignored file; the tracked canonical
+// catalog holds published records only. The bridge serves both merged.
+const DRAFT_CATALOG = ".resource-studio/draft-catalog.json";
+
+const readTextSafe = async (relative) => {
+  try { return await readText(relative); } catch (error) { if (error.code === "ENOENT") return null; throw error; }
+};
+
+const readProjectCatalog = async () => {
+  const canonical = await read(CATALOG);
+  const drafts = JSON.parse((await readTextSafe(DRAFT_CATALOG)) ?? "null") || { resources: [] };
+  return { ...canonical, resources: [...canonical.resources, ...(drafts.resources || [])] };
+};
 
 async function poll(check, message, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -120,8 +133,11 @@ await test("real repository: add → publish → render → persist → unpublis
     catalog: await readText(CATALOG),
     publicCatalog: await readText(PUBLIC_CATALOG),
     manifest: await readText(MANIFEST),
+    draftCatalog: await readTextSafe(DRAFT_CATALOG),
   };
   const original = JSON.parse(snapshot.catalog);
+  const originalDrafts = snapshot.draftCatalog ? JSON.parse(snapshot.draftCatalog).resources : [];
+  const originalCount = original.resources.length + originalDrafts.length;
   let chromium;
   ({ chromium } = await import("playwright"));
   let browser;
@@ -145,10 +161,10 @@ await test("real repository: add → publish → render → persist → unpublis
     await Promise.all([studio.goto(ORIGINS.studio, { waitUntil: "domcontentloaded" }), portfolio.goto(ORIGINS.portfolio, { waitUntil: "domcontentloaded" })]);
     await readyStudio(studio);
     await suite.test("1. upload creates a draft with its real file outside public/", async () => {
-      const before = await read(CATALOG);
+      const before = await readProjectCatalog();
       await studio.locator('input[type="file"][multiple]').setInputFiles({ name: "astra-live-proof.txt", mimeType: "text/plain", buffer: Buffer.from(PAYLOAD) });
-      await poll(async () => (await read(CATALOG)).resources.length === before.resources.length + 1, "Upload never reached the canonical catalog");
-      const catalog = await read(CATALOG);
+      await poll(async () => (await readProjectCatalog()).resources.length === before.resources.length + 1, "Upload never reached the project catalog");
+      const catalog = await readProjectCatalog();
       uploaded = catalog.resources.find((resource) => resource.originalFileName === "astra-live-proof.txt");
       assert(uploaded, "Uploaded record is missing from the canonical catalog");
       createdId = uploaded.id;
@@ -162,7 +178,7 @@ await test("real repository: add → publish → render → persist → unpublis
       await studio.getByLabel("Display title", { exact: false }).fill(TITLE);
       await studio.getByLabel("Description", { exact: true }).fill(DESCRIPTION);
       await save(studio);
-      const catalog = await read(CATALOG);
+      const catalog = await readProjectCatalog();
       const record = catalog.resources.find((resource) => resource.id === createdId);
       assert.equal(record.title, TITLE);
       assert.equal(record.description, DESCRIPTION);
@@ -174,7 +190,7 @@ await test("real repository: add → publish → render → persist → unpublis
       await studio.getByLabel("Visible on public website").check();
       await save(studio);
 
-      const catalog = await read(CATALOG);
+      const catalog = await readProjectCatalog();
       const record = catalog.resources.find((resource) => resource.id === createdId);
       assert.equal(record.published, true, "Canonical record is not published");
       assert.equal(record.filePath, uploaded.filePath);
@@ -215,7 +231,7 @@ await test("real repository: add → publish → render → persist → unpublis
     await suite.test("5. production build publishes the file and its manifest", async () => {
       await buildProject();
       const files = await distFiles();
-      const record = (await read(CATALOG)).resources.find((resource) => resource.id === createdId);
+      const record = (await readProjectCatalog()).resources.find((resource) => resource.id === createdId);
       assert(await exists(path.join(ROOT, "dist", record.filePath)), "dist does not contain the published file");
       const distManifest = JSON.parse(await readText("dist/assets/resources/resources.json"));
       assert(distManifest.resources.some((resource) => resource.id === createdId), "dist manifest omits the published resource");
@@ -228,7 +244,7 @@ await test("real repository: add → publish → render → persist → unpublis
     await suite.test("6. unpublish removes it from the live UI and from production output", async () => {
       await studio.getByLabel("Visible on public website").uncheck();
       await save(studio);
-      const record = (await read(CATALOG)).resources.find((resource) => resource.id === createdId);
+      const record = (await readProjectCatalog()).resources.find((resource) => resource.id === createdId);
       assert.equal(record.published, false);
       assert.equal(await exists(path.join(ROOT, "public", record.filePath)), false, "Unpublished file still sits in public/");
       assert.equal(await readText(path.join(".resource-studio/drafts", record.filePath)), PAYLOAD, "Unpublished file was not preserved privately");
@@ -264,11 +280,12 @@ await test("real repository: add → publish → render → persist → unpublis
       studio.once("dialog", (dialog) => dialog.accept());
       const result = await commitAction(studio, () => studio.locator(".studio-resource-row").filter({ has: studio.getByRole("heading", { name: TITLE, exact: true }) }).getByRole("button", { name: "Delete resource", exact: true }).click());
       assert(result.trash?.startsWith(".resource-studio/trash/"), "Delete produced no recoverable trash");
-      const catalog = await read(CATALOG);
+      const catalog = await readProjectCatalog();
       assert(!catalog.resources.some((resource) => resource.id === createdId), "Deleted record survived");
-      assert.equal(catalog.resources.length, original.resources.length);
+      assert.equal(catalog.resources.length, originalCount);
       assert.equal(await exists(path.join(ROOT, ".resource-studio/drafts", uploaded.filePath)), false, "Deleted draft file survived");
       assert.equal(await readText(CATALOG), snapshot.catalog, "Canonical catalog was not restored byte-for-byte");
+      assert.equal(await readTextSafe(DRAFT_CATALOG), snapshot.draftCatalog, "Private draft catalog was not restored byte-for-byte");
       assert.equal(await readText(PUBLIC_CATALOG), snapshot.publicCatalog, "Generated public catalog was not restored");
       assert.equal(await readText(MANIFEST), snapshot.manifest, "Public manifest was not restored");
     });
@@ -288,22 +305,32 @@ await test("real repository: add → publish → render → persist → unpublis
     assert.deepEqual(errors, [], "Uncaught browser errors");
   } finally {
     if (!KEEP && createdId) {
-      const catalog = await read(CATALOG);
+      const catalog = await readProjectCatalog();
       const record = catalog.resources.find((resource) => resource.id === createdId) || uploaded || null;
       if (catalog.resources.some((resource) => resource.id === createdId)) {
-        const next = { ...catalog, resources: catalog.resources.filter((resource) => resource.id !== createdId) };
-        next.resources = next.resources.map((resource, index) => ({ ...resource, displayOrder: index + 1 }));
-        const { toPublicCatalog, normalizeCatalog } = await import(pathToFileURLSafe(path.join(ROOT, "src/lib/resourceValidation.js")));
-        const publicCatalog = toPublicCatalog(normalizeCatalog(next));
-        await write(CATALOG, next);
+        const { toPublicCatalog, normalizeCatalog, withDisplayOrder } = await import(pathToFileURLSafe(path.join(ROOT, "src/lib/resourceValidation.js")));
+        const next = normalizeCatalog({
+          ...catalog,
+          resources: catalog.resources.filter((resource) => resource.id !== createdId).map((resource, index) => ({ ...resource, displayOrder: index + 1 })),
+        });
+        // Mirror the bridge split: published records to the tracked catalog,
+        // drafts to the private git-ignored catalog.
+        const canonical = { ...next, resources: withDisplayOrder(next.resources.filter((resource) => resource.published)) };
+        const drafts = { ...next, resources: withDisplayOrder(next.resources.filter((resource) => !resource.published)) };
+        const publicCatalog = toPublicCatalog(canonical);
+        await write(CATALOG, canonical);
+        await fsp.writeFile(path.join(ROOT, DRAFT_CATALOG), `${JSON.stringify(drafts, null, 2)}\n`);
         await write(PUBLIC_CATALOG, publicCatalog);
         await write(MANIFEST, publicCatalog);
       }
-      const current = await readText(CATALOG);
-      if (current !== snapshot.catalog) {
+      if ((await readText(CATALOG)) !== snapshot.catalog) {
         await fsp.writeFile(path.join(ROOT, CATALOG), snapshot.catalog);
         await fsp.writeFile(path.join(ROOT, PUBLIC_CATALOG), snapshot.publicCatalog);
         await fsp.writeFile(path.join(ROOT, MANIFEST), snapshot.manifest);
+      }
+      if ((await readTextSafe(DRAFT_CATALOG)) !== snapshot.draftCatalog) {
+        if (snapshot.draftCatalog === null) await fsp.rm(path.join(ROOT, DRAFT_CATALOG), { force: true });
+        else await fsp.writeFile(path.join(ROOT, DRAFT_CATALOG), snapshot.draftCatalog);
       }
       if (record?.filePath) {
         await fsp.rm(path.join(ROOT, "public", record.filePath), { force: true });
